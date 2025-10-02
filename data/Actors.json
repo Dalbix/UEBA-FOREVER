@@ -1,0 +1,12 @@
+[
+null,
+{"id":1,"battlerName":"SF_Actor3_7","characterIndex":0,"characterName":"Pere_sprite","classId":8,"equips":[2,0,0,3,0],"faceIndex":0,"faceName":"Actor1","traits":[],"initialLevel":1,"maxLevel":99,"name":"Pere","nickname":"Pere","note":"","profile":""},
+{"id":2,"battlerName":"Actor1_2","characterIndex":2,"characterName":"Pere_sprite2","classId":2,"equips":[1,0,0,9,0],"faceIndex":1,"faceName":"Actor1","traits":[],"initialLevel":1,"maxLevel":99,"name":"Anton Pirulero","nickname":"Anton Pirulero","note":"","profile":""},
+{"id":3,"battlerName":"","characterIndex":0,"characterName":"JUAN PERSONAJES","classId":1,"equips":[0,0,0,0,0],"faceIndex":0,"faceName":"juan","traits":[],"initialLevel":1,"maxLevel":99,"name":"Ampa","nickname":"Ampa","note":"","profile":""},
+{"id":4,"battlerName":"SF_Actor3_7","characterIndex":0,"characterName":"Pere_sprite3","classId":8,"equips":[0,0,0,3,0],"faceIndex":0,"faceName":"Actor1","traits":[],"initialLevel":1,"maxLevel":99,"name":"Pere Incognito","nickname":"Pere","note":"","profile":""},
+{"id":5,"battlerName":"SF_Actor1_5","characterIndex":4,"characterName":"Pere_sprite4","classId":8,"equips":[0,0,0,0,0],"faceIndex":0,"faceName":"Actor1","traits":[],"initialLevel":1,"maxLevel":99,"name":"Pere Doctor","nickname":"Dr. Pere","note":"","profile":""},
+{"id":6,"battlerName":"","characterIndex":7,"characterName":"Pere_sprite4","classId":8,"equips":[0,0,0,0,0],"faceIndex":0,"faceName":"Actor1","traits":[],"initialLevel":1,"maxLevel":99,"name":"Pere conduciendo","nickname":"Pere","note":"","profile":""},
+{"id":7,"battlerName":"","characterIndex":0,"characterName":"$Furgon","classId":7,"equips":[0,0,0,0,0],"faceIndex":0,"faceName":"Actor1","traits":[],"initialLevel":1,"maxLevel":99,"name":"Pere Loco Conduciendo","nickname":"","note":"","profile":""},
+{"id":8,"battlerName":"","characterIndex":4,"characterName":"juanpersonajes3","classId":1,"equips":[0,0,0,0,0],"faceIndex":0,"faceName":"Actor1","traits":[],"initialLevel":1,"maxLevel":99,"name":"Perecia Jack MClane","nickname":"","note":"","profile":""},
+{"id":9,"battlerName":"","characterIndex":7,"characterName":"bomberos","classId":4,"equips":[0,0,0,0,0],"faceIndex":0,"faceName":"Actor1","traits":[],"initialLevel":1,"maxLevel":99,"name":"Pere Bombero","nickname":"","note":"","profile":""}
+]
