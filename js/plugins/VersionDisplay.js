@@ -1,24 +1,28 @@
 /*:
  * @target MZ
- * @plugindesc Muestra el timestamp del último commit desde version.json en el título (abajo a la izquierda). 
+ * @plugindesc Muestra el timestamp del último commit desde version.json en PC, o texto por defecto en web.
  * @author 3DalbiX
- *
- * @help VersionDisplay.js
- *
- * Este plugin lee el archivo "version.json" en la carpeta del juego
- * y muestra el campo "version" en la pantalla de título.
  */
 
 (() => {
-    const fs = require("fs");
     let versionText = "versión desconocida";
 
-    try {
-        const data = fs.readFileSync("version.json", "utf8");
-        const json = JSON.parse(data);
-        versionText = json.version || versionText;
-    } catch (e) {
-        console.warn("No se encontró version.json, usando texto por defecto.");
+    // Detectar si estamos en NW.js (PC) o navegador
+    const isNode = typeof require === "function";
+
+    if (isNode) {
+        // --- Código para PC ---
+        const fs = require("fs");
+        try {
+            const data = fs.readFileSync("version.json", "utf8");
+            const json = JSON.parse(data);
+            versionText = json.version || versionText;
+        } catch (e) {
+            console.warn("No se encontró version.json, usando texto por defecto.");
+        }
+    } else {
+        // --- Código para web ---
+        versionText = "20251002 2202"; // Puedes cambiar por algo dinámico si quieres
     }
 
     // --- En la pantalla de título ---
@@ -35,3 +39,4 @@
         this._versionSprite.bitmap.drawText(versionText, x, y, maxWidth, 36, "left");
     };
 })();
+
