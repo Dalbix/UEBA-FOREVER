@@ -15,5 +15,6 @@ var $plugins =
 {"name":"SmallVideoPlayer","status":true,"description":"Reproduce un video en una ventana pequeña dentro del juego, fijo en pantalla y pausado al abrir menú.","parameters":{}},
 {"name":"VehicleSpeedConfig","status":true,"description":"Cambia la velocidad de Boat/Ship/Airship desde parámetros y comandos de plugin.","parameters":{"Boat Speed":"4","Ship Speed":"2","Airship Speed":"6"}},
 {"name":"SaveExportImportMenu","status":true,"description":"Exportar/Importar saves de forma fiable en Web/IIS/WebView. Añade un menú \"Save Manager\" con subopciones.","parameters":{}},
-{"name":"VersionDisplay","status":true,"description":"Muestra el número de versión del juego en el título y menú principal.","parameters":{"Version":"v25.9.24"}}
+{"name":"VersionDisplay","status":true,"description":"Muestra el número de versión del juego en el título y menú principal.","parameters":{"Version":"v25.9.24"}},
+{"name":"Login","status":true,"description":"Plugin de login con usuario y contraseña fijos al iniciar el juego (usuario no case sensitive)","parameters":{}}
 ];
