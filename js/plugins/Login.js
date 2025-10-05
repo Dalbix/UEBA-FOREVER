@@ -5,6 +5,9 @@
  */
 
 (() => {
+    // Detectar si estamos en NW.js (PC) o navegador
+    const isNode = typeof require === "function";
+    if (!isNode) {
     // Array de usuarios y contraseñas
     const USERS = ["albi", "rubio", "aaron","eden"];
     const PASSWORDS = ["Pirulon2025!", "Pirulon2025!", "Pirulon2025!","Pirulon2025!"];
@@ -48,4 +51,5 @@
     }
 
     window.Scene_LoginError = Scene_LoginError;
+}
 })();
