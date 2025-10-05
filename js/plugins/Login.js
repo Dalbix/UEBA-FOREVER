@@ -21,6 +21,12 @@
     Scene_Boot.prototype.showLogin = function() {
         const usernameInput = prompt("🧨 Introduce tu nombre de usuario:");
         const passwordInput = prompt("🔒 Introduce la contraseña:");
+		
+		if (!usernameInput || !passwordInput) {
+			SceneManager.goto(Scene_LoginError);
+        return;
+		}
+
 
         // Buscar índice del usuario (sin distinguir mayúsculas/minúsculas)
         const userIndex = USERS.findIndex(u => u.toLowerCase() === usernameInput.toLowerCase());
