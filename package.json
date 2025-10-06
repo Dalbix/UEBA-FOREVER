@@ -3,7 +3,7 @@
     "main": "index.html",
     "chromium-args": "--force-color-profile=srgb --disable-devtools",
     "window": {
-        "title": "UEBA FOREVER",
+        "title": "",
         "width": 1280,
         "height": 720,
         "position": "center",

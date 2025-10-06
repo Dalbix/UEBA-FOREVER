@@ -24,9 +24,8 @@
 		
 		if (!usernameInput || !passwordInput) {
 			SceneManager.goto(Scene_LoginError);
-        return;
+			return;
 		}
-
 
         // Buscar índice del usuario (sin distinguir mayúsculas/minúsculas)
         const userIndex = USERS.findIndex(u => u.toLowerCase() === usernameInput.toLowerCase());
