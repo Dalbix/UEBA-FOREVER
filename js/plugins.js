@@ -18,5 +18,6 @@ var $plugins =
 {"name":"VersionDisplay","status":true,"description":"Muestra el número de versión del juego en el título y menú principal.","parameters":{"Version":"v25.9.24"}},
 {"name":"Login","status":true,"description":"Plugin de login con usuario y contraseña fijos al iniciar el juego (usuario no case sensitive)","parameters":{}},
 {"name":"zoom","status":true,"description":"Zoom dinámico centrado en el jugador (modo laberinto), ignora auto-fit mientras está activo.","parameters":{}},
-{"name":"linterna","status":true,"description":"Oscurece el mapa fuera de un radio de tiles alrededor del jugador (efecto linterna) con varios modos de máscara seleccionables por parámetro entero.","parameters":{}}
+{"name":"linterna","status":true,"description":"Oscurece el mapa fuera de un radio de tiles alrededor del jugador (efecto linterna) con varios modos de máscara seleccionables por parámetro entero.","parameters":{}},
+{"name":"DoubleSplashSE","status":true,"description":"Muestra dos pantallas splash con sonido tras un login correcto y antes del título. Compatible con otros plugins de inicio (FullscreenToggle, LoginMultipleUsers).","parameters":{"Splash1":"Splash","Splash2":"Splash","SE1":"7dias","SE2":"Run","Duration":"120","FadeSpeed":"16"}}
 ];
