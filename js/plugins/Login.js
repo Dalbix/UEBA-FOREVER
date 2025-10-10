@@ -220,8 +220,8 @@
     _Scene_Title_create.call(this);
 
     // Solo actuar la primera vez que se crea título en esta ejecución
-    if ($gameSystem._startupProcessed) return;
-    $gameSystem._startupProcessed = true;
+if (window._LoginSplashDone) return;
+window._LoginSplashDone = true;
 
     // Si estamos en NW.js/editor -> mostrar splash directamente (si no mostrado todavía)
     if (isNode||isAndroid()) {
