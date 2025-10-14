@@ -9,5 +9,7 @@ null,
 {"id":7,"battlerName":"","characterIndex":0,"characterName":"$Furgon","classId":7,"equips":[0,0,0,0,0],"faceIndex":0,"faceName":"Actor1","traits":[],"initialLevel":1,"maxLevel":99,"name":"Pere Loco Conduciendo","nickname":"","note":"","profile":""},
 {"id":8,"battlerName":"","characterIndex":4,"characterName":"juanpersonajes3","classId":1,"equips":[0,0,0,0,0],"faceIndex":0,"faceName":"Actor1","traits":[],"initialLevel":1,"maxLevel":99,"name":"Perecia Jack MClane","nickname":"","note":"","profile":""},
 {"id":9,"battlerName":"","characterIndex":7,"characterName":"bomberos","classId":4,"equips":[0,0,0,0,0],"faceIndex":0,"faceName":"Actor1","traits":[],"initialLevel":1,"maxLevel":99,"name":"Pere Bombero","nickname":"","note":"","profile":""},
-{"id":10,"battlerName":"","characterIndex":6,"characterName":"Pere_sprite5","classId":4,"equips":[0,0,0,0,0],"faceIndex":0,"faceName":"Actor1","traits":[],"initialLevel":1,"maxLevel":99,"name":"Pere Cristiano","nickname":"","note":"","profile":""}
+{"id":10,"battlerName":"","characterIndex":6,"characterName":"Pere_sprite5","classId":4,"equips":[0,0,0,0,0],"faceIndex":0,"faceName":"Actor1","traits":[],"initialLevel":1,"maxLevel":99,"name":"Pere Cristiano","nickname":"","note":"","profile":""},
+{"id":11,"battlerName":"","characterIndex":3,"characterName":"JUAN PERSONAJES","classId":1,"equips":[0,0,0,0,0],"faceIndex":2,"faceName":"juan","traits":[],"initialLevel":1,"maxLevel":99,"name":"David","nickname":"David","note":"","profile":""},
+{"id":12,"battlerName":"","characterIndex":5,"characterName":"JUAN PERSONAJES","classId":1,"equips":[0,0,0,0,0],"faceIndex":3,"faceName":"juan","traits":[],"initialLevel":1,"maxLevel":99,"name":"Ana","nickname":"Ana","note":"","profile":""}
 ]
