@@ -18,5 +18,6 @@ var $plugins =
 {"name":"SaveExportImportMenu","status":true,"description":"Exportar/Importar saves de forma fiable en Web/IIS/WebView. Añade un menú \"Save Manager\" con subopciones.","parameters":{}},
 {"name":"VersionDisplay","status":true,"description":"Muestra el número de versión del juego en el título y menú principal.","parameters":{"Version":"v25.9.24"}},
 {"name":"zoom","status":true,"description":"Zoom dinámico centrado en el jugador (modo laberinto), ignora auto-fit mientras está activo.","parameters":{}},
-{"name":"linterna","status":true,"description":"Oscurece el mapa fuera de un radio de tiles alrededor del jugador (efecto linterna) con varios modos de máscara seleccionables por parámetro entero.","parameters":{}}
+{"name":"linterna","status":true,"description":"Oscurece el mapa fuera de un radio de tiles alrededor del jugador (efecto linterna) con varios modos de máscara seleccionables por parámetro entero.","parameters":{}},
+{"name":"Control_Autosave","status":true,"description":"Controla cuándo se permite el autosave (puede desactivarse temporalmente).","parameters":{}}
 ];
