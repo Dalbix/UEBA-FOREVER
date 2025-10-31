@@ -22,7 +22,7 @@
         }
     } else {
         // --- Código para web ---
-        versionText = "v.20251020.0200"; // Puedes cambiar por algo dinámico si quieres
+        versionText = "v.20251031.0156"; // Puedes cambiar por algo dinámico si quieres
     }
 
     // --- En la pantalla de título ---
