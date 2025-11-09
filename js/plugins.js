@@ -20,5 +20,7 @@ var $plugins =
 {"name":"zoom","status":true,"description":"Zoom dinámico centrado en el jugador (modo laberinto), ignora auto-fit mientras está activo.","parameters":{}},
 {"name":"linterna","status":true,"description":"Oscurece el mapa fuera de un radio de tiles alrededor del jugador (efecto linterna) con varios modos de máscara seleccionables por parámetro entero.","parameters":{}},
 {"name":"Control_Autosave","status":true,"description":"Controla cuándo se permite el autosave (puede desactivarse temporalmente).","parameters":{}},
-{"name":"Plataformas2D","status":true,"description":"Plataforma 2D con salto lento, colisiones precisas y soporte para autozoom activo.","parameters":{"desplazamiento":"4","jumpHeight":"3","jumpTime":"1.5","jumpSE":"SaltoPere"}}
+{"name":"Plataformas2D","status":true,"description":"Plataforma 2D con salto lento, colisiones precisas y soporte para autozoom activo.","parameters":{"desplazamiento":"4","jumpHeight":"3","jumpTime":"1.5","jumpSE":"SaltoPere"}},
+{"name":"CharacterZoom","status":true,"description":"Permite aplicar zoom visual a personajes o eventos sin alterar el zoom global del mapa. Compatible con AutoZoomTouchImages.","parameters":{}},
+{"name":"Disparo2D","status":true,"description":"Disparo 2D con zoom de proyectil, colisiones y control por script","parameters":{"shootSpeed":"0.25","shootRange":"15","shootSE":"Attack2","projectileGraphic":"attack","projectileScale":"0.10","projectileYOffset":"0"}}
 ];
