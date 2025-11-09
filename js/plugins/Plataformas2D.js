@@ -73,6 +73,14 @@
   let vy = 0;
   let grounded = false;
 
+function isNode() {
+    return Utils.isNwjs(); // PC (RPG Maker ejecutado como app NW.js)
+}
+
+function isAndroid() {
+    return !!window.AndroidInterface; // app Android con WebView nativa
+}
+
   // Inicialización segura del flag global
 const _Game_System_initialize = Game_System.prototype.initialize;
 Game_System.prototype.initialize = function() {
@@ -108,7 +116,9 @@ Game_System.prototype.initialize = function() {
     if (Input.isPressed("right")) dx = HORIZONTAL_SPEED;
 
     // Salto
-    if ((Input.isTriggered("ok") || Input.isTriggered("jump")) && grounded) {
+  const clickToJump = !isNode(); // solo en web o android
+if (((Input.isTriggered("ok") || Input.isTriggered("jump")) || (clickToJump && TouchInput.isTriggered())) && grounded) {
+
       vy = -JUMP;
       grounded = false;
       AudioManager.playSe({ name: JUMP_SE_NAME, pan: 0, pitch: 100, volume: 90 });

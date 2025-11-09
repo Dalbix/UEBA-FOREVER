@@ -59,14 +59,25 @@
     const Y_OFFSET = Number(params["projectileYOffset"] || 0);
 
     Input.keyMapper[65] = "shoot"; // Tecla A
+function isNode() {
+    return Utils.isNwjs(); // PC (RPG Maker ejecutado como app NW.js)
+}
 
+function isAndroid() {
+    return !!window.AndroidInterface; // app Android con WebView nativa
+}
     // Control global
     Game_System.prototype.enableShooting2D = function(enabled) {
         this._shooting2DEnabled = enabled;
     };
+	// Inicialización segura para disparo 2D
+const _Game_System_initialize_shoot = Game_System.prototype.initialize;
+Game_System.prototype.initialize = function() {
+    _Game_System_initialize_shoot.call(this);
+    if (this._shooting2DEnabled === undefined) this._shooting2DEnabled = false;
+};
 Game_System.prototype.isShooting2DEnabled = function() {
-    if (this._shooting2DEnabled === undefined) this._shooting2DEnabled = false; // ← por defecto deshabilitado
-    return this._shooting2DEnabled;
+    return !!this._shooting2DEnabled;
 };
 
     // Projectile class
@@ -191,9 +202,11 @@ Game_System.prototype.isShooting2DEnabled = function() {
         if (!this._projectiles2D) this._projectiles2D = [];
         if (!$gameSystem.isShooting2DEnabled()) return;
 
-        if (Input.isTriggered("shoot") || TouchInput.isTriggered()) {
-            this.shootProjectile();
-        }
+const clickToShoot = !isNode(); // sólo web/android
+if ((Input.isTriggered("shoot")) || (clickToShoot && TouchInput.isTriggered())) {
+    this.shootProjectile();
+}
+
 
         for (const p of this._projectiles2D) p.update();
         this._projectiles2D = this._projectiles2D.filter(p => p._alive);
