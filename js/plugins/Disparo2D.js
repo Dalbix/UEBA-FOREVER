@@ -54,7 +54,7 @@
     const SPEED = Number(params["shootSpeed"] || 0.25);
     const RANGE = Number(params["shootRange"] || 8);
     const SE_NAME = String(params["shootSE"] || "Attack3");
-    const GRAPHIC = String(params["projectileGraphic"] || "Bullet");
+    const GRAPHIC = String(params["projectileGraphic"] || "attack");
     const SCALE = Number(params["projectileScale"] || 1.0);
     const Y_OFFSET = Number(params["projectileYOffset"] || 0);
 
@@ -70,6 +70,16 @@ function isAndroid() {
     Game_System.prototype.enableShooting2D = function(enabled) {
         this._shooting2DEnabled = enabled;
     };
+// Permite cambiar el gráfico del proyectil por script
+Game_System.prototype.setProjectileGraphic2D = function(filename) {
+    this._projectileGraphic2D = filename;
+};
+
+// Devuelve el gráfico actual (por si otro sistema lo necesita)
+Game_System.prototype.getProjectileGraphic2D = function() {
+    return this._projectileGraphic2D || String(PluginManager.parameters("Disparo2D")["projectileGraphic"] || "attack");
+};
+
 	// Inicialización segura para disparo 2D
 const _Game_System_initialize_shoot = Game_System.prototype.initialize;
 Game_System.prototype.initialize = function() {
@@ -97,7 +107,8 @@ Game_System.prototype.isShooting2DEnabled = function() {
             const scene = SceneManager._scene;
             if (!scene?._spriteset?._tilemap) return;
 
-            const bmp = ImageManager.loadPicture(GRAPHIC);
+const bmp = ImageManager.loadPicture($gameSystem.getProjectileGraphic2D());
+
             const sprite = new Sprite(bmp);
             sprite.anchor.set(0.5, 0.5);
             sprite.scale.set(SCALE * (this._dir === 4 ? -1 : 1), SCALE);

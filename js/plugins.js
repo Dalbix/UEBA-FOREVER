@@ -22,5 +22,5 @@ var $plugins =
 {"name":"Control_Autosave","status":true,"description":"Controla cuándo se permite el autosave (puede desactivarse temporalmente).","parameters":{}},
 {"name":"Plataformas2D","status":true,"description":"Plataforma 2D con salto lento, colisiones precisas y soporte para autozoom activo.","parameters":{"desplazamiento":"4","jumpHeight":"3","jumpTime":"1.5","jumpSE":"SaltoPere"}},
 {"name":"CharacterZoom","status":true,"description":"Permite aplicar zoom visual a personajes o eventos sin alterar el zoom global del mapa. Compatible con AutoZoomTouchImages.","parameters":{}},
-{"name":"Disparo2D","status":true,"description":"Disparo 2D con zoom de proyectil, colisiones y control por script","parameters":{"shootSpeed":"0.25","shootRange":"15","shootSE":"Attack2","projectileGraphic":"attack","projectileScale":"0.10","projectileYOffset":"0"}}
+{"name":"Disparo2D","status":true,"description":"Disparo 2D robusto: colisión usando bounds globales de sprites (compatible con zoom) + control por script","parameters":{"shootSpeed":"0.25","shootRange":"15","shootSE":"Attack2","projectileGraphic":"attack","projectileScale":"0.10","projectileYOffset":"0"}}
 ];
