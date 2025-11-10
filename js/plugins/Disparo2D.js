@@ -285,9 +285,9 @@ Game_Player.prototype.shootProjectileInDirection = function(dir) {
         startY = sprite.y / tileHeight - torsoOffset + Y_OFFSET;
     }
 
-    const offset = 0.65;
+    const offset = 4.00;
     if (dir === 6) startX += offset;
-    if (dir === 4) startX -= offset;
+    if (dir === 4) startX += offset;
 
     const p = new Projectile(startX, startY, dir);
     this._projectiles2D.push(p);
