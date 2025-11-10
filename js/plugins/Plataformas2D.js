@@ -134,31 +134,54 @@ Game_System.prototype.initialize = function() {
   function updatePlatform(player) {
     if ($gameMessage.isBusy() || !$gamePlayer.canMove()) return;
 
-    // Movimiento horizontal
 // --- Detección del entorno actual ---
 const env = getRuntimeEnvironment();
 const isTouchPlatform = (env.isAndroidApp || env.isAndroidWeb);
 
-// --- Movimiento y salto táctil combinados ---
+// --- Movimiento horizontal ---
 let dx = 0;
-let shouldJump = false;
 
-if (isTouchPlatform && TouchInput.isPressed()) {
-  const x = TouchInput.x;
-  const y = TouchInput.y;
-  const centerX = Graphics.width / 2;
-  const lowerZone = Graphics.height * 0.7;
+// PC y Windows Web → teclado
+if (Input.isPressed("left")) dx = -HORIZONTAL_SPEED;
+if (Input.isPressed("right")) dx = HORIZONTAL_SPEED;
 
-  const touchLeft = (x < centerX - 60);
-  const touchRight = (x > centerX + 60);
-  const touchLow = (y > lowerZone);
+// Android / web móvil → lado del toque decide dirección
+if (isTouchPlatform) {
+  if (TouchInput.isPressed()) {
+    const centerX = Graphics.width / 2;
+    // Mostrar log de posición táctil
+    console.log(
+      `[Touch] x:${TouchInput.x}, y:${TouchInput.y}, center:${centerX}`
+    );
 
-  if (touchLeft) dx = -HORIZONTAL_SPEED;
-  if (touchRight) dx = HORIZONTAL_SPEED;
+    // Lado izquierdo → mover a la izquierda
+    if (TouchInput.x < centerX - 50) {
+      dx = -HORIZONTAL_SPEED;
+      console.log("→ Mover IZQUIERDA (toque detectado)");
+    }
 
-  // Si el toque está en parte baja de la pantalla, también salta
-  if (touchLow) shouldJump = true;
+    // Lado derecho → mover a la derecha
+    if (TouchInput.x > centerX + 50) {
+      dx = HORIZONTAL_SPEED;
+      console.log("→ Mover DERECHA (toque detectado)");
+    }
+  } else {
+    // Mantén el movimiento unos frames tras soltar para evitar microcortes
+    if (player._touchMoveTimer && player._touchMoveTimer > 0) {
+      player._touchMoveTimer--;
+      dx = player._lastTouchDir || 0;
+    } else {
+      dx = 0;
+    }
+  }
+
+  // Guarda dirección si hay movimiento
+  if (dx !== 0) {
+    player._lastTouchDir = dx;
+    player._touchMoveTimer = 10;
+  }
 }
+//-------------
 
 // Controles de PC (mantiene compatibilidad)
 if (!isTouchPlatform) {
