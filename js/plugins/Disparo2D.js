@@ -59,13 +59,22 @@
     const Y_OFFSET = Number(params["projectileYOffset"] || 0);
 
     Input.keyMapper[65] = "shoot"; // Tecla A
-function isNode() {
-    return Utils.isNwjs(); // PC (RPG Maker ejecutado como app NW.js)
+function getRuntimeEnvironment() {
+  const isNode = Utils.isNwjs();
+  const isAndroidApp = !!window.AndroidInterface;
+  const ua = navigator.userAgent || "";
+  const isAndroidWeb = /Android/i.test(ua) && !isNode && !isAndroidApp;
+  const isWindowsWeb = /Windows/i.test(ua) && !isNode;
+
+  return {
+    isNode,          // app NW.js
+    isAndroidApp,    // app Android con WebView nativa
+    isAndroidWeb,    // navegador web móvil en Android
+    isWindowsWeb,    // navegador web de Windows
+    isWeb: !isNode   // cualquier cosa que no sea NW.js
+  };
 }
 
-function isAndroid() {
-    return !!window.AndroidInterface; // app Android con WebView nativa
-}
     // Control global
     Game_System.prototype.enableShooting2D = function(enabled) {
         this._shooting2DEnabled = enabled;
@@ -213,9 +222,21 @@ const bmp = ImageManager.loadPicture($gameSystem.getProjectileGraphic2D());
         if (!this._projectiles2D) this._projectiles2D = [];
         if (!$gameSystem.isShooting2DEnabled()) return;
 
-const clickToShoot = !isNode(); // sólo web/android
-if ((Input.isTriggered("shoot")) || (clickToShoot && TouchInput.isTriggered())) {
-    this.shootProjectile();
+const env = getRuntimeEnvironment();
+
+// En Android (app o navegador móvil) → toque dispara.
+// En Windows (navegador) → no dispara al tocar, solo tecla A.
+const clickToShoot = (env.isAndroidApp || env.isAndroidWeb);
+
+if (Input.isTriggered("shoot") || (clickToShoot && TouchInput.isTriggered())) {
+    // Si estás en Android web/app, el disparo va hacia donde se toque
+    if (clickToShoot && TouchInput.isTriggered()) {
+        const centerX = Graphics.width / 2;
+        const dir = TouchInput.x >= centerX ? 6 : 4; // derecha o izquierda
+        this.shootProjectileInDirection(dir);
+    } else {
+        this.shootProjectile();
+    }
 }
 
 
@@ -251,5 +272,25 @@ offset=4.0;
         const p = new Projectile(startX, startY, dir);
         this._projectiles2D.push(p);
     };
+Game_Player.prototype.shootProjectileInDirection = function(dir) {
+    if (!$gameSystem.isShooting2DEnabled()) return;
+    AudioManager.playSe({ name: SE_NAME, pan: 0, pitch: 100, volume: 90 });
+
+    const sprite = SceneManager._scene?._spriteset?._characterSprites.find(s => s._character === this);
+    let startX = this._realX;
+    let startY = this._realY + Y_OFFSET;
+    if (sprite) {
+        const tileHeight = $gameMap.tileHeight();
+        const torsoOffset = 0.55;
+        startY = sprite.y / tileHeight - torsoOffset + Y_OFFSET;
+    }
+
+    const offset = 0.65;
+    if (dir === 6) startX += offset;
+    if (dir === 4) startX -= offset;
+
+    const p = new Projectile(startX, startY, dir);
+    this._projectiles2D.push(p);
+};
 
 })();

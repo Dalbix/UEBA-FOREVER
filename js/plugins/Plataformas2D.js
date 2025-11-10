@@ -73,12 +73,23 @@
   let vy = 0;
   let grounded = false;
 
-function isNode() {
-    return Utils.isNwjs(); // PC (RPG Maker ejecutado como app NW.js)
-}
 
-function isAndroid() {
-    return !!window.AndroidInterface; // app Android con WebView nativa
+
+
+function getRuntimeEnvironment() {
+  const isNode = Utils.isNwjs();
+  const isAndroidApp = !!window.AndroidInterface;
+  const ua = navigator.userAgent || "";
+  const isAndroidWeb = /Android/i.test(ua) && !isNode && !isAndroidApp;
+  const isWindowsWeb = /Windows/i.test(ua) && !isNode;
+
+  return {
+    isNode,          // app NW.js
+    isAndroidApp,    // app Android con WebView nativa
+    isAndroidWeb,    // navegador web móvil en Android
+    isWindowsWeb,    // navegador web de Windows
+    isWeb: !isNode   // cualquier cosa que no sea NW.js
+  };
 }
 
   // Inicialización segura del flag global
@@ -111,18 +122,42 @@ Game_System.prototype.initialize = function() {
     if ($gameMessage.isBusy() || !$gamePlayer.canMove()) return;
 
     // Movimiento horizontal
-    let dx = 0;
-    if (Input.isPressed("left")) dx = -HORIZONTAL_SPEED;
-    if (Input.isPressed("right")) dx = HORIZONTAL_SPEED;
+// --- Detección del entorno actual ---
+const env = getRuntimeEnvironment();
+const isTouchPlatform = (env.isAndroidApp || env.isAndroidWeb);
 
-    // Salto
-  const clickToJump = !isNode(); // solo en web o android
-if (((Input.isTriggered("ok") || Input.isTriggered("jump")) || (clickToJump && TouchInput.isTriggered())) && grounded) {
+// --- Movimiento horizontal ---
+let dx = 0;
 
-      vy = -JUMP;
-      grounded = false;
-      AudioManager.playSe({ name: JUMP_SE_NAME, pan: 0, pitch: 100, volume: 90 });
-    }
+// PC y Windows Web: teclado
+if (Input.isPressed("left")) dx = -HORIZONTAL_SPEED;
+if (Input.isPressed("right")) dx = HORIZONTAL_SPEED;
+
+// Android (app o navegador): lado del toque decide dirección
+if (isTouchPlatform && TouchInput.isPressed()) {
+  const centerX = Graphics.width / 2;
+  if (TouchInput.x < centerX - 50) dx = -HORIZONTAL_SPEED; // zona izquierda → moverse izquierda
+  if (TouchInput.x > centerX + 50) dx = HORIZONTAL_SPEED;  // zona derecha → moverse derecha
+}
+
+// --- Salto ---
+let shouldJump = false;
+
+// PC → Z o Espacio
+if (Input.isTriggered("ok") || Input.isTriggered("jump")) shouldJump = true;
+
+// Android → toque en la parte inferior central (ej. saltar)
+if (isTouchPlatform && TouchInput.isTriggered()) {
+  const lowerZone = Graphics.height * 0.7;
+  if (TouchInput.y > lowerZone) shouldJump = true;
+}
+
+if (shouldJump && grounded) {
+  vy = -JUMP;
+  grounded = false;
+  AudioManager.playSe({ name: JUMP_SE_NAME, pan: 0, pitch: 100, volume: 90 });
+}
+
 
     // Gravedad
     vy += GRAVITY;
