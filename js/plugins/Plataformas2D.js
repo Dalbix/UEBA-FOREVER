@@ -138,70 +138,111 @@ Game_System.prototype.initialize = function() {
 const env = getRuntimeEnvironment();
 const isTouchPlatform = (env.isAndroidApp || env.isAndroidWeb);
 
-// --- Movimiento horizontal ---
+// --- Movimiento y salto con detección de tap vs long-press ---
 let dx = 0;
-shouldJump = false;
-// PC y Windows Web → teclado
-if (Input.isPressed("left")) dx = -HORIZONTAL_SPEED;
-if (Input.isPressed("right")) dx = HORIZONTAL_SPEED;
+let shouldJump = false;
 
-// Android / web móvil → lado del toque decide dirección
-if (isTouchPlatform) {
-  if (TouchInput.isPressed()) {
-    const centerX = Graphics.width / 2;
-    // Mostrar log de posición táctil
-    console.log(
-      `[Touch] x:${TouchInput.x}, y:${TouchInput.y}, center:${centerX}`
-    );
+// Parámetros (ajustables)
+const HOLD_THRESHOLD = 15; // frames para considerar "mantenido" (~15 frames = 250ms a 60fps)
+const TAP_MOVE_FRAMES = 12; // frames que mantiene movimiento tras un tap
 
-    // Lado izquierdo → mover a la izquierda
-    if (TouchInput.x < centerX - 50) {
-      dx = -HORIZONTAL_SPEED;
-      console.log("→ Mover IZQUIERDA (toque detectado)");
-    }
-
-    // Lado derecho → mover a la derecha
-    if (TouchInput.x > centerX + 50) {
-      dx = HORIZONTAL_SPEED;
-      console.log("→ Mover DERECHA (toque detectado)");
-    }
-  } else {
-    // Mantén el movimiento unos frames tras soltar para evitar microcortes
-    if (player._touchMoveTimer && player._touchMoveTimer > 0) {
-      player._touchMoveTimer--;
-      dx = player._lastTouchDir || 0;
-    } else {
-      dx = 0;
-    }
-  }
-
-  // Guarda dirección si hay movimiento
-  if (dx !== 0) {
-    player._lastTouchDir = dx;
-    player._touchMoveTimer = 10;
-  }
-}
-//-------------
-
-// Controles de PC (mantiene compatibilidad)
+// --- TECLADO / PC: comportamiento normal ---
 if (!isTouchPlatform) {
   if (Input.isPressed("left")) dx = -HORIZONTAL_SPEED;
   if (Input.isPressed("right")) dx = HORIZONTAL_SPEED;
   if (Input.isTriggered("ok") || Input.isTriggered("jump")) shouldJump = true;
+} else {
+  // --- TOUCH PLATFORM: gestión robusta de tap vs long-press ---
+  // TouchInput.isTriggered() => frame inicial del toque
+  if (TouchInput.isTriggered()) {
+    player._touchHoldFrames = 0;
+    player._touchLongHandled = false;
+    player._touchStartX = TouchInput.x || (Graphics.width / 2);
+    // reset tap dir until release decides
+  }
+
+  // Mientras se mantenga el toque
+  if (TouchInput.isPressed()) {
+    // Aumentar contador de frames de mantenimiento
+    player._touchHoldFrames = (player._touchHoldFrames || 0) + 1;
+
+    // Decidir dirección según x actual (permite deslizar)
+    const centerX = Graphics.width / 2;
+    if ((TouchInput.x || player._touchStartX) < centerX - 60) {
+      dx = -HORIZONTAL_SPEED;
+      player._touchLastDir = -1;
+    } else if ((TouchInput.x || player._touchStartX) > centerX + 60) {
+      dx = HORIZONTAL_SPEED;
+      player._touchLastDir = 1;
+    } else {
+      // centro: no desplazamiento horizontal
+      dx = 0;
+      // no actualizar _touchLastDir
+    }
+
+    // Si supera umbral y aún no se ha manejado, ejecutar acción de LONG PRESS (salto)
+    if (player._touchHoldFrames >= HOLD_THRESHOLD && !player._touchLongHandled) {
+      player._touchLongHandled = true;
+      // Solo iniciar salto si está en el suelo
+      if (grounded) {
+        shouldJump = true;
+      }
+      // Asegurar que mantenga la dirección actual durante el salto
+      if (player._touchLastDir) {
+        player._touchLastDir = player._touchLastDir;
+      }
+    }
+  }
+
+  // Cuando se suelta el toque (TouchInput.isReleased())
+  if (TouchInput.isReleased()) {
+    // Si no llegó a ser long-press -> es TAP (mover corto)
+    if (!player._touchLongHandled) {
+      // Decide dirección según la posición del toque que inició el tap
+      const centerX = Graphics.width / 2;
+      const startX = player._touchStartX || centerX;
+      if (startX < centerX - 60) {
+        player._touchTapDir = -1;
+        player._touchLastDir = -1;
+        player._touchMoveTimer = TAP_MOVE_FRAMES;
+      } else if (startX > centerX + 60) {
+        player._touchTapDir = 1;
+        player._touchLastDir = 1;
+        player._touchMoveTimer = TAP_MOVE_FRAMES;
+      } else {
+        player._touchTapDir = 0;
+      }
+    } else {
+      // si fue long-press, mantenemos _touchLastDir para la fase de salto
+      player._touchMoveTimer = 0; // no necesitamos timer: movimiento lo da la presión durante salto
+    }
+    // reset contador de hold (para la próxima interacción)
+    player._touchHoldFrames = 0;
+    player._touchLongHandled = false;
+    player._touchStartX = 0;
+  }
+
+  // Si hay un tap reciente, aplicar movimiento durante TAP_MOVE_FRAMES
+  if (player._touchMoveTimer > 0) {
+    player._touchMoveTimer--;
+    if (player._touchTapDir === -1) dx = -HORIZONTAL_SPEED;
+    else if (player._touchTapDir === 1) dx = HORIZONTAL_SPEED;
+  }
+
+  // Si estamos en el aire (saltando) y hay una dirección guardada por long press,
+  // mantener la velocidad horizontal hacia esa dirección durante el salto
+  if (!grounded && player._touchLastDir) {
+    dx = player._touchLastDir * HORIZONTAL_SPEED;
+  }
 }
 
-// Ejecutar salto
+// Ejecutar salto si fue decidido (tanto por teclado como por long-press)
 if (shouldJump && grounded) {
   vy = -JUMP;
   grounded = false;
   AudioManager.playSe({ name: JUMP_SE_NAME, pan: 0, pitch: 100, volume: 90 });
 }
 
-if (shouldJump && grounded) {
-  vy = -JUMP;
-  grounded = false;
-  AudioManager.playSe({ name: JUMP_SE_NAME, pan: 0, pitch: 100, volume: 90 });
-}
 
 
     // Gravedad
