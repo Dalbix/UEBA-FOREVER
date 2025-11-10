@@ -140,7 +140,7 @@ const isTouchPlatform = (env.isAndroidApp || env.isAndroidWeb);
 
 // --- Movimiento horizontal ---
 let dx = 0;
-
+shouldJump = false;
 // PC y Windows Web → teclado
 if (Input.isPressed("left")) dx = -HORIZONTAL_SPEED;
 if (Input.isPressed("right")) dx = HORIZONTAL_SPEED;
