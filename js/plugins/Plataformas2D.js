@@ -91,7 +91,20 @@ function getRuntimeEnvironment() {
     isWeb: !isNode   // cualquier cosa que no sea NW.js
   };
 }
-
+// === Debug: Mostrar entorno detectado al cargar el plugin ===
+const __envCheck = getRuntimeEnvironment();
+console.log(
+  "%c[Plataformas2D] Entorno detectado:",
+  "color: #00ccff; font-weight: bold;"
+);
+console.log({
+  isNode: __envCheck.isNode,
+  isAndroidApp: __envCheck.isAndroidApp,
+  isAndroidWeb: __envCheck.isAndroidWeb,
+  isWindowsWeb: __envCheck.isWindowsWeb,
+  isWeb: __envCheck.isWeb,
+  userAgent: navigator.userAgent
+});
   // Inicialización segura del flag global
 const _Game_System_initialize = Game_System.prototype.initialize;
 Game_System.prototype.initialize = function() {
@@ -126,30 +139,39 @@ Game_System.prototype.initialize = function() {
 const env = getRuntimeEnvironment();
 const isTouchPlatform = (env.isAndroidApp || env.isAndroidWeb);
 
-// --- Movimiento horizontal ---
+// --- Movimiento y salto táctil combinados ---
 let dx = 0;
-
-// PC y Windows Web: teclado
-if (Input.isPressed("left")) dx = -HORIZONTAL_SPEED;
-if (Input.isPressed("right")) dx = HORIZONTAL_SPEED;
-
-// Android (app o navegador): lado del toque decide dirección
-if (isTouchPlatform && TouchInput.isPressed()) {
-  const centerX = Graphics.width / 2;
-  if (TouchInput.x < centerX - 50) dx = -HORIZONTAL_SPEED; // zona izquierda → moverse izquierda
-  if (TouchInput.x > centerX + 50) dx = HORIZONTAL_SPEED;  // zona derecha → moverse derecha
-}
-
-// --- Salto ---
 let shouldJump = false;
 
-// PC → Z o Espacio
-if (Input.isTriggered("ok") || Input.isTriggered("jump")) shouldJump = true;
-
-// Android → toque en la parte inferior central (ej. saltar)
-if (isTouchPlatform && TouchInput.isTriggered()) {
+if (isTouchPlatform && TouchInput.isPressed()) {
+  const x = TouchInput.x;
+  const y = TouchInput.y;
+  const centerX = Graphics.width / 2;
   const lowerZone = Graphics.height * 0.7;
-  if (TouchInput.y > lowerZone) shouldJump = true;
+
+  const touchLeft = (x < centerX - 60);
+  const touchRight = (x > centerX + 60);
+  const touchLow = (y > lowerZone);
+
+  if (touchLeft) dx = -HORIZONTAL_SPEED;
+  if (touchRight) dx = HORIZONTAL_SPEED;
+
+  // Si el toque está en parte baja de la pantalla, también salta
+  if (touchLow) shouldJump = true;
+}
+
+// Controles de PC (mantiene compatibilidad)
+if (!isTouchPlatform) {
+  if (Input.isPressed("left")) dx = -HORIZONTAL_SPEED;
+  if (Input.isPressed("right")) dx = HORIZONTAL_SPEED;
+  if (Input.isTriggered("ok") || Input.isTriggered("jump")) shouldJump = true;
+}
+
+// Ejecutar salto
+if (shouldJump && grounded) {
+  vy = -JUMP;
+  grounded = false;
+  AudioManager.playSe({ name: JUMP_SE_NAME, pan: 0, pitch: 100, volume: 90 });
 }
 
 if (shouldJump && grounded) {
