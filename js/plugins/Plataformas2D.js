@@ -74,7 +74,9 @@
   let grounded = false;
 
 
-
+Game_System.prototype.isPlatformer2DActive = function() {
+    return !!this._plataforma2DActiva;
+};
 
 function getRuntimeEnvironment() {
   const isNode = Utils.isNwjs();
