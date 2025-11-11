@@ -223,21 +223,56 @@ const bmp = ImageManager.loadPicture($gameSystem.getProjectileGraphic2D());
         if (!$gameSystem.isShooting2DEnabled()) return;
 
 const env = getRuntimeEnvironment();
+const clickToShoot = (env.isAndroidApp || env.isAndroidWeb || env.isWindowsWeb);
 
-// En Android (app o navegador móvil) → toque dispara.
-// En Windows (navegador) → no dispara al tocar, solo tecla A.
-const clickToShoot = (env.isAndroidApp || env.isAndroidWeb);
+if (clickToShoot) {
+    const isPlatformerActive = $gameSystem.isPlatformer2DActive && $gameSystem.isPlatformer2DActive();
 
-if (Input.isTriggered("shoot") || (clickToShoot && TouchInput.isTriggered())) {
-    // Si estás en Android web/app, el disparo va hacia donde se toque
-    if (clickToShoot && TouchInput.isTriggered()) {
-        const centerX = Graphics.width / 2;
-        const dir = TouchInput.x >= centerX ? 6 : 4; // derecha o izquierda
-        this.shootProjectileInDirection(dir);
+    if (isPlatformerActive) {
+        // Si Plataformas2D está activo → detectar doble toque separado
+        this._touchShootLastTime = this._touchShootLastTime || 0;
+        this._touchShootCooldown = this._touchShootCooldown || 0;
+
+        // Cuando se toca la pantalla
+        if (TouchInput.isTriggered()) {
+            const now = Graphics.frameCount;
+            const elapsed = now - this._touchShootLastTime;
+
+            // Si el tiempo entre toques es corto pero no el mismo frame → dispara
+            if (elapsed > 10 && elapsed < 40) { // entre 10 y 40 frames (~0.15–0.65s)
+                const centerX = Graphics.width / 2;
+                const dir = TouchInput.x >= centerX ? 6 : 4;
+                this.shootProjectileInDirection(dir);
+                this._touchShootLastTime = 0; // reinicia
+                console.log("💥 Disparo por segundo toque detectado");
+            } else {
+                // Primer toque → solo guardar tiempo (usado por salto del otro plugin)
+                this._touchShootLastTime = now;
+            }
+        }
+
+        // Evita que un toque mantenido repita disparos
+        if (TouchInput.isPressed()) {
+            this._touchShootCooldown++;
+        } else {
+            this._touchShootCooldown = 0;
+        }
+
     } else {
-        this.shootProjectile();
+        // Si no está el modo plataformas, comportamiento normal
+        if (TouchInput.isTriggered()) {
+            const centerX = Graphics.width / 2;
+            const dir = TouchInput.x >= centerX ? 6 : 4;
+            this.shootProjectileInDirection(dir);
+        }
     }
 }
+
+// Tecla A siempre dispara
+if (Input.isTriggered("shoot")) {
+    this.shootProjectile();
+}
+
 
 
         for (const p of this._projectiles2D) p.update();
