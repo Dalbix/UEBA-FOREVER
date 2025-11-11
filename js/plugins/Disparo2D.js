@@ -225,52 +225,61 @@ const bmp = ImageManager.loadPicture($gameSystem.getProjectileGraphic2D());
 const env = getRuntimeEnvironment();
 const clickToShoot = (env.isAndroidApp || env.isAndroidWeb || env.isWindowsWeb);
 
+// Asegurar variables
+this._touchShootLastTime = this._touchShootLastTime || 0;
+
 if (clickToShoot) {
-    const isPlatformerActive = $gameSystem.isPlatformer2DActive && $gameSystem.isPlatformer2DActive();
+  const isPlatformerActive = $gameSystem.isPlatformer2DActive && $gameSystem.isPlatformer2DActive();
 
-    if (isPlatformerActive) {
-        // Si Plataformas2D está activo → detectar doble toque separado
-        this._touchShootLastTime = this._touchShootLastTime || 0;
-        this._touchShootCooldown = this._touchShootCooldown || 0;
+  if (isPlatformerActive) {
+    // Lectura del frame en que Plataformas2D consumió un trigger (si existe)
+    const platformLastTapFrame = $gameSystem._lastPlatformTapFrame || 0;
 
-        // Cuando se toca la pantalla
-        if (TouchInput.isTriggered()) {
-            const now = Graphics.frameCount;
-            const elapsed = now - this._touchShootLastTime;
+    // Cuando se detecta trigger táctil
+    if (TouchInput.isTriggered()) {
+      const now = Graphics.frameCount;
 
-            // Si el tiempo entre toques es corto pero no el mismo frame → dispara
-            if (elapsed > 10 && elapsed < 40) { // entre 10 y 40 frames (~0.15–0.65s)
-                const centerX = Graphics.width / 2;
-                const dir = TouchInput.x >= centerX ? 6 : 4;
-                this.shootProjectileInDirection(dir);
-                this._touchShootLastTime = 0; // reinicia
-                console.log("💥 Disparo por segundo toque detectado");
-            } else {
-                // Primer toque → solo guardar tiempo (usado por salto del otro plugin)
-                this._touchShootLastTime = now;
-            }
-        }
+      // Si el trigger acaba de ser consumido por Plataformas2D en ESTE MISMO FRAME,
+      // lo ignoramos como posible disparo (es el primer toque para saltar)
+      if (platformLastTapFrame === now) {
+        // primer toque: lo ignoramos a propósito para que Plataformas2D haga el salto
+        // Guardamos el tiempo para detectar el siguiente toque como "segunda pulsación"
+        this._touchShootLastTime = now;
+        // no disparamos ahora
+      } else {
+        // No fue consumido por Plataformas2D en este frame
+        // Comprobar si hay un primer toque anterior reciente -> segunda pulsación dispara
+        const elapsed = now - (this._touchShootLastTime || 0);
 
-        // Evita que un toque mantenido repita disparos
-        if (TouchInput.isPressed()) {
-            this._touchShootCooldown++;
+        if (elapsed > 0 && elapsed < 40) {
+          // Segunda pulsación dentro de ventana → disparar
+          const centerX = Graphics.width / 2;
+          const dir = (TouchInput.x >= centerX) ? 6 : 4;
+          this.shootProjectileInDirection(dir);
+          // reiniciar contador
+          this._touchShootLastTime = 0;
         } else {
-            this._touchShootCooldown = 0;
+          // No hay primer toque reciente: almacenar como primer toque
+          this._touchShootLastTime = now;
         }
-
-    } else {
-        // Si no está el modo plataformas, comportamiento normal
-        if (TouchInput.isTriggered()) {
-            const centerX = Graphics.width / 2;
-            const dir = TouchInput.x >= centerX ? 6 : 4;
-            this.shootProjectileInDirection(dir);
-        }
+      }
     }
+
+    // Si el jugador mantiene el toque, no debe generar disparos por repetición automática:
+    // nada extra es necesario aquí (TouchInput.isPressed() no dispara por sí misma).
+  } else {
+    // Modo normal (no platformer): tocar dispara inmediatamente
+    if (TouchInput.isTriggered()) {
+      const centerX = Graphics.width / 2;
+      const dir = (TouchInput.x >= centerX) ? 6 : 4;
+      this.shootProjectileInDirection(dir);
+    }
+  }
 }
 
-// Tecla A siempre dispara
+// Tecla A → dispara siempre (PC)
 if (Input.isTriggered("shoot")) {
-    this.shootProjectile();
+  this.shootProjectile();
 }
 
 

@@ -155,7 +155,10 @@ if (!isTouchPlatform) {
     dx = HORIZONTAL_SPEED;
     player.setDirection(6);
   }
-  if (Input.isTriggered("ok") || Input.isTriggered("jump")) shouldJump = true;
+  if (Input.isTriggered("ok") || Input.isTriggered("jump")){
+	  shouldJump = true;
+$gameSystem._lastPlatformTapFrame = Graphics.frameCount;
+  }  
 } else {
   // --- TOUCH PLATFORM ---
   if (TouchInput.isTriggered()) {
