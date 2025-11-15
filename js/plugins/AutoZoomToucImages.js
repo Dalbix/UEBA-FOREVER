@@ -1,7 +1,7 @@
 /*:
  * @target MZ
  * @plugindesc Auto ajuste de zoom en mapa, corrección de clics y ajuste de imágenes. Evita doble ejecución al cerrar mensajes.
- * @author 3DalbiX (modificado)
+ * @author 3DalbiX
  *
  * @help
  * Este plugin ajusta el zoom del mapa según su tamaño,

@@ -113,6 +113,25 @@ Game_System.prototype.initialize = function() {
   _Game_System_initialize.call(this);
   this._plataforma2DActiva = false;
 };
+// === NUEVO BLOQUE: configuración de plataformas por mapa ===
+Game_System.prototype.setPlatforms = function(ids, amplitudes, speeds, dirs) {
+  this._platformIds = Array.isArray(ids) ? ids : [];
+  this._platformAmplitudes = Array.isArray(amplitudes) ? amplitudes : [];
+  this._platformSpeeds = Array.isArray(speeds) ? speeds : [];
+  this._platformDirs = Array.isArray(dirs) ? dirs : [];
+  console.log("[Plataformas2D] Configuradas plataformas dinámicas:", this._platformIds);
+};
+
+// Inicializa vacío
+const _Game_System_initialize_Platforms = Game_System.prototype.initialize;
+Game_System.prototype.initialize = function() {
+  _Game_System_initialize_Platforms.call(this);
+  this._platformIds = [];
+  this._platformAmplitudes = [];
+  this._platformSpeeds = [];
+  this._platformDirs = [];
+};
+
 
   // Registrar comandos de plugin
   PluginManager.registerCommand("Plataformas2D", "activar", () => {
@@ -228,29 +247,74 @@ if (shouldJump && grounded) {
     let newX = player._realX + dx;
     newX = Math.max(0, Math.min(newX, $dataMap.width - 1));
     let newY = player._realY + vy;
+	
+	// === LIMITE DURO DEL MAPA ===
+// Evita salir del mapa por cualquier borde
+const mapWidth = $dataMap.width;
+const mapHeight = $dataMap.height;
+
+// Límite horizontal
+if (newX < 0) {
+  newX = 0;
+  dx = 0;
+}
+if (newX > mapWidth - 1) {
+  newX = mapWidth - 1;
+  dx = 0;
+}
+
+// Límite superior (no saltar fuera del mapa)
+if (newY < 0) {
+  newY = 0;
+  vy = 0;
+  grounded = false; // por si cae después
+}
+
+// Límite inferior (no caer fuera del mapa)
+if (newY > mapHeight - 1) {
+  newY = mapHeight - 1;
+  vy = 0;
+  grounded = true; // toca el suelo del límite
+}
+
 
     const step = 0.02;
 
     // Colisión con suelo
-    if (vy > 0) {
-      let pos = player._realY;
-      const hitboxWidth = 0.3;
-      while (pos < newY) {
-        const tileBelow = Math.floor(pos + 1);
-        const left = Math.floor(newX - hitboxWidth);
-        const right = Math.floor(newX + hitboxWidth);
-        if (
-          !$gameMap.isPassable(left, tileBelow, 2) ||
-          !$gameMap.isPassable(right, tileBelow, 2)
-        ) {
-          newY = tileBelow - 1;
-          vy = 0;
-          grounded = true;
-          break;
-        }
-        pos += step;
-      }
-    } else if (vy < 0) {
+	function isTileSolid(x, y, dir = 2) {
+  // Dir = 2 abajo, 8 arriba
+  const tx = Math.floor(x);
+  const ty = Math.floor(y);
+
+// Solo el borde inferior y superior del mapa son sólidos
+if (ty < 0 || ty >= $dataMap.height) return true;
+
+// Borde izquierdo o derecho: NO son sólidos, para evitar "pared invisible"
+if (tx < 0 || tx >= $dataMap.width) return false;
+
+  return !$gameMap.isPassable(tx, ty, dir);
+}
+
+   if (vy > 0) {
+  const hitboxWidth = 0.3;
+  let pos = player._realY;
+
+  while (pos < newY) {
+    const tileBelow = Math.floor(pos + 1);
+
+    const leftSolid = isTileSolid(newX - hitboxWidth, tileBelow, 2);
+    const rightSolid = isTileSolid(newX + hitboxWidth, tileBelow, 2);
+
+const floorY = Math.floor(newY); // tile de abajo según nueva posición
+if (isTileSolid(newX - hitboxWidth, floorY, 2) || isTileSolid(newX + hitboxWidth, floorY, 2)) {
+  newY = floorY;  // te coloca justo **sobre** el tile sólido
+  vy = 0;
+  grounded = true;
+  break;
+}
+    pos += step;
+  }
+} else if (vy < 0) {
       let pos = player._realY;
       while (pos > newY) {
         const tileAbove = Math.floor(pos);
@@ -274,23 +338,39 @@ if (shouldJump && grounded) {
 
     if (!player._jumpEventFlags) player._jumpEventFlags = {};
 
-    for (const event of $gameMap.events()) {
-      if (!event || !event.eventId || event._erased) continue;
-      const ex = event._realX;
-      const ey = event._realY;
-      const dx = Math.abs(player._realX - ex);
-      const dy = Math.abs(player._realY - ey);
-      const touching = dx < 0.5 && dy < 0.5;
+for (const event of $gameMap.events()) {
+    if (!event || !event.eventId || event._erased) continue;
 
-      if (event._playerInside === undefined) event._playerInside = false;
+    const ex = event._realX;
+    const ey = event._realY;
 
-      if (touching && !event._playerInside) {
+    // === NUEVO: obtener el zoom aplicado ===
+    const zoom = event._zoomScale ?? 1.0;
+
+    // === NUEVO: calcular tamaño de colisión basado en zoom ===
+    const hitW = 0.5 * zoom;  // ancho de colisión horizontal
+    const hitH = 0.5 * zoom;  // y vertical
+
+    // === NUEVO: colisión ajustada al tamaño escalado ===
+    const touching =
+        Math.abs(player._realX - ex) < hitW &&
+        Math.abs(player._realY - ey) < hitH;
+
+    // Mantener flag interior
+    if (event._playerInside === undefined) event._playerInside = false;
+
+    if (touching && !event._playerInside) {
+
         event._playerInside = true;
-        if (!player._jumpEventFlags[event.eventId()])
-          player._jumpEventFlags[event.eventId()] = { A: false, B: false };
 
+        // Inicializar flags
+        if (!player._jumpEventFlags[event.eventId()])
+            player._jumpEventFlags[event.eventId()] = { A: false, B: false };
+
+        // Determinar tipo de colisión (superior, inferior o lateral)
         let collisionType = "";
-        const EPS = 0.5;
+        const EPS = 0.5 * zoom;
+
         if (vy > 0 && player._realY + EPS >= ey) collisionType = "top";
         else if (vy < 0 && player._realY - EPS <= ey) collisionType = "bottom";
         else collisionType = "side";
@@ -300,27 +380,30 @@ if (shouldJump && grounded) {
         const activePage = event.page();
 
         if (activePage) {
-          const trigger = activePage.trigger;
-          if (trigger === 1 || trigger === 2) {
-            if (collisionType === "top") {
-              if (!player._jumpEventFlags[event.eventId()].A) {
-                $gameSelfSwitches.setValue(keyB, true);
-                $gameSelfSwitches.setValue(keyA, false);
-                player._jumpEventFlags[event.eventId()].B = true;
-              }
-            } else {
-              $gameSelfSwitches.setValue(keyA, true);
-              $gameSelfSwitches.setValue(keyB, false);
-              player._jumpEventFlags[event.eventId()].A = true;
-            }
-          }
-        }
-      }
+            const trigger = activePage.trigger;
 
-      if (!touching && event._playerInside) {
-        event._playerInside = false;
-      }
+            if (trigger === 1 || trigger === 2) {
+                if (collisionType === "top") {
+                    if (!player._jumpEventFlags[event.eventId()].A) {
+                        $gameSelfSwitches.setValue(keyB, true);
+                        $gameSelfSwitches.setValue(keyA, false);
+                        player._jumpEventFlags[event.eventId()].B = true;
+                    }
+                } else {
+                    $gameSelfSwitches.setValue(keyA, true);
+                    $gameSelfSwitches.setValue(keyB, false);
+                    player._jumpEventFlags[event.eventId()].A = true;
+                }
+            }
+        }
     }
+
+    // Salida del área
+    if (!touching && event._playerInside) {
+        event._playerInside = false;
+    }
+}
+
 
     if (grounded) player._jumpEventFlags = {};
     player._prevRealY = player._realY;
@@ -333,18 +416,31 @@ if (shouldJump && grounded) {
       );
     }
 
-    // Plataforma elevadora (ID fijo)
-    const PLATAFORMA_ID = 63;
-    const plataforma = $gameMap.event(PLATAFORMA_ID);
-    if (plataforma) {
-      if (plataforma._baseY === undefined) {
-        plataforma._baseY = plataforma._realY;
-        plataforma._directionUp = true;
-      }
 
-      const AMPLITUD = 3;
-      const VELOCIDAD = 0.03;
+// === PLATAFORMAS ELEVADORAS (desde vectores configurables) ===
+if ($gameSystem._platformIds && $gameSystem._platformIds.length > 0) {
+  const ids = $gameSystem._platformIds;
+  const amplitudes = $gameSystem._platformAmplitudes;
+  const speeds = $gameSystem._platformSpeeds;
+  const dirs = $gameSystem._platformDirs;
 
+  for (let i = 0; i < ids.length; i++) {
+    const id = ids[i];
+    const plataforma = $gameMap.event(id);
+    if (!plataforma) continue;
+
+    const AMPLITUD = amplitudes[i] ?? 3;
+    const VELOCIDAD = speeds[i] ?? 0.03;
+    const DIR = dirs[i] ?? 0; // 0=vertical, 1=horizontal
+
+    // Inicialización
+    if (plataforma._baseX === undefined) plataforma._baseX = plataforma._realX;
+    if (plataforma._baseY === undefined) plataforma._baseY = plataforma._realY;
+    if (plataforma._directionUp === undefined) plataforma._directionUp = true;
+
+    // Movimiento
+    if (DIR === 0) {
+      // Movimiento vertical
       if (plataforma._directionUp) {
         plataforma._realY -= VELOCIDAD;
         if (plataforma._realY <= plataforma._baseY - AMPLITUD)
@@ -354,29 +450,49 @@ if (shouldJump && grounded) {
         if (plataforma._realY >= plataforma._baseY + AMPLITUD)
           plataforma._directionUp = true;
       }
-
       plataforma._y = plataforma._realY;
-
-      if (plataforma._prevRealY === undefined)
-        plataforma._prevRealY = plataforma._realY;
-
-      const ex = plataforma._realX;
-      const ey = plataforma._realY;
-      const onTop =
-        vy >= 0 &&
-        player._realY + 1 >= ey &&
-        player._realY < ey &&
-        Math.abs(player._realX - ex) < 0.8;
-
-      if (onTop) {
-        vy = 0;
-        grounded = true;
-        player._realY = ey - 1;
-        player._realY += plataforma._realY - plataforma._prevRealY;
+    } else {
+      // Movimiento horizontal
+      if (plataforma._directionUp) {
+        plataforma._realX += VELOCIDAD;
+        if (plataforma._realX >= plataforma._baseX + AMPLITUD)
+          plataforma._directionUp = false;
+      } else {
+        plataforma._realX -= VELOCIDAD;
+        if (plataforma._realX <= plataforma._baseX - AMPLITUD)
+          plataforma._directionUp = true;
       }
-
-      plataforma._prevRealY = plataforma._realY;
+      plataforma._x = plataforma._realX;
     }
+
+    // Inicializar posición anterior si no existe
+    if (plataforma._prevRealY === undefined) plataforma._prevRealY = plataforma._realY;
+    if (plataforma._prevRealX === undefined) plataforma._prevRealX = plataforma._realX;
+
+    const ex = plataforma._realX;
+    const ey = plataforma._realY;
+
+    // Detección de si el jugador está encima
+    const onTop =
+      vy >= 0 &&
+      player._realY + 1 >= ey &&
+      player._realY < ey &&
+      Math.abs(player._realX - ex) < 0.8;
+
+    if (onTop) {
+      vy = 0;
+      grounded = true;
+      player._realY = ey - 1;
+      player._realY += (plataforma._realY - plataforma._prevRealY) || 0;
+      player._realX += (plataforma._realX - plataforma._prevRealX) || 0;
+    }
+
+    plataforma._prevRealY = plataforma._realY;
+    plataforma._prevRealX = plataforma._realX;
+  }
+}
+
+
   }
 
   // Tecla espacio → saltar
