@@ -99,5 +99,6 @@ null,
 {"id":97,"expanded":false,"name":"SillaPiso_M5","order":97,"parentId":95,"scrollX":588,"scrollY":441.45454545454544,"quick":false},
 {"id":98,"expanded":false,"name":"SillaJuego1_M5","order":98,"parentId":95,"scrollX":588,"scrollY":326.54545454545456,"quick":false},
 {"id":99,"expanded":false,"name":"Pesadilla_M5","order":99,"parentId":95,"scrollX":588,"scrollY":332.3636363636364,"quick":false},
-{"id":100,"expanded":false,"name":"SillaJuego2_M5","order":100,"parentId":95,"scrollX":588,"scrollY":326.54545454545456,"quick":false}
+{"id":100,"expanded":true,"name":"SillaJuego2_M5","order":100,"parentId":95,"scrollX":588,"scrollY":326.54545454545456,"quick":false},
+{"id":101,"expanded":false,"name":"SillaJuego3_M5","order":101,"parentId":100,"scrollX":588,"scrollY":326.54545454545456,"quick":false}
 ]
