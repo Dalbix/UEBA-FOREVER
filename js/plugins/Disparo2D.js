@@ -51,6 +51,22 @@
     const Y_OFFSET = Number(params["projectileYOffset"] || 0);
 
     Input.keyMapper[65] = "shoot";
+	
+	    function getRuntimeEnvironment() {
+      const isNode = Utils.isNwjs();
+      const isAndroidApp = !!window.AndroidInterface;
+      const ua = navigator.userAgent || "";
+      const isAndroidWeb = /Android/i.test(ua) && !isNode && !isAndroidApp;
+      const isWindowsWeb = /Windows/i.test(ua) && !isNode;
+
+      return {
+        isNode,
+        isAndroidApp,
+        isAndroidWeb,
+        isWindowsWeb,
+        isWeb: !isNode
+      };
+    }
 
     // ------------------------------------------------------------
     // MODIFICADO ► enableShooting2D pasa SE, Gráfico, Escala y Anim
