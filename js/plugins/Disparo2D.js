@@ -269,6 +269,8 @@
         if (Input.isTriggered("shoot")) {
             this.shootProjectile();
         }
+		const env = getRuntimeEnvironment();
+
  const clickToShoot = (env.isAndroidApp || env.isAndroidWeb || env.isWindowsWeb);
      // >>> DISPARO POR TOUCH <<<
     if (TouchInput.isTriggered()&&clickToShoot) {
