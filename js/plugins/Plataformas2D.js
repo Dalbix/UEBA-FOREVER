@@ -114,11 +114,12 @@ Game_System.prototype.initialize = function() {
   this._plataforma2DActiva = false;
 };
 // === NUEVO BLOQUE: configuración de plataformas por mapa ===
-Game_System.prototype.setPlatforms = function(ids, amplitudes, speeds, dirs) {
+Game_System.prototype.setPlatforms = function(ids, amplitudes, speeds, dirs, offsets) {
   this._platformIds = Array.isArray(ids) ? ids : [];
   this._platformAmplitudes = Array.isArray(amplitudes) ? amplitudes : [];
   this._platformSpeeds = Array.isArray(speeds) ? speeds : [];
   this._platformDirs = Array.isArray(dirs) ? dirs : [];
+  this._platformOffsets = Array.isArray(offsets) ? offsets : [];
   console.log("[Plataformas2D] Configuradas plataformas dinámicas:", this._platformIds);
 };
 
@@ -130,6 +131,7 @@ Game_System.prototype.initialize = function() {
   this._platformAmplitudes = [];
   this._platformSpeeds = [];
   this._platformDirs = [];
+  this._platformOffsets = [];
 };
 
 
@@ -294,7 +296,8 @@ if (tx < 0 || tx >= $dataMap.width) return false;
 
   return !$gameMap.isPassable(tx, ty, dir);
 }
-
+//---------
+/*
    if (vy > 0) {
   const hitboxWidth = 0.3;
   let pos = player._realY;
@@ -317,15 +320,75 @@ if (isTileSolid(newX - hitboxWidth, floorY, 2) || isTileSolid(newX + hitboxWidth
 } else if (vy < 0) {
       let pos = player._realY;
       while (pos > newY) {
-        const tileAbove = Math.floor(pos);
-        if (!$gameMap.isPassable(Math.floor(newX), tileAbove, 8)) {
-          newY = tileAbove + 1;
-          vy = 0;
-          break;
-        }
+const tileToEnter = Math.floor(newY); // tile realmente arriba del jugador
+if (!isTilePassableFromBelow(newX, tileToEnter)) {
+    newY = tileToEnter + 1;  // colocarlo justo debajo del obstáculo
+    vy = 0;
+    break;
+}
         pos -= step;
       }
     }
+	*/
+	//------------
+	// --- CAÍDA (vy > 0) ---
+//
+// ===== COLISIÓN SUAVE Y CONTINUA =====
+//
+const TILE_TOP = (ty) => ty;        // borde superior del tile
+const TILE_BOTTOM = (ty) => ty + 1; // borde inferior del tile
+const MARGIN = 0.001;               // evita vibraciones
+
+// --- CAÍDA ---
+if (vy > 0) {
+
+    const txLeft  = Math.floor(newX - 0.3);
+    const txRight = Math.floor(newX + 0.3);
+    const ty = Math.floor(newY); // tile al que se va a entrar por abajo
+//const FOOT = player._realY + vy + 0.001;  
+//const ty = Math.floor(FOOT);
+    const canEnterUpLeft  = $gameMap.isPassable(txLeft, ty, 8);
+    const canEnterUpRight = $gameMap.isPassable(txRight, ty, 8);
+
+    // Si NO se puede entrar desde arriba → suelo sólido
+    if (!canEnterUpLeft || !canEnterUpRight) {
+        newY = TILE_TOP(ty) - MARGIN;
+        vy = 0;
+        grounded = true;
+    } 
+    // Sí se puede entrar → plataforma unidireccional
+    else {
+        const bottom = TILE_BOTTOM(ty);
+        if (newY > bottom - MARGIN) {
+            newY = bottom - MARGIN;
+            vy = 0;
+            grounded = true;
+        }
+    }
+}
+
+
+
+// --- SUBIDA ---
+else if (vy < 0) {
+
+    const txLeft  = Math.floor(newX - 0.3);
+    const txRight = Math.floor(newX + 0.3);
+
+    const ty = Math.floor(newY); // tile de arriba al que se pretende entrar
+
+    // ¿Permite pasar por abajo (↓) el tile superior?
+    const canExitDownLeft  = $gameMap.isPassable(txLeft, ty, 2);
+    const canExitDownRight = $gameMap.isPassable(txRight, ty, 2);
+
+    // Si NO permite pasar por abajo → CHOQUE (techo)
+    if (!canExitDownLeft || !canExitDownRight) {
+        newY = TILE_BOTTOM(ty) + MARGIN;
+        vy = 0;
+    }
+}
+
+//-------------
 
     // Aplicar posiciones reales
     player._realX = newX;
@@ -423,6 +486,7 @@ if ($gameSystem._platformIds && $gameSystem._platformIds.length > 0) {
   const amplitudes = $gameSystem._platformAmplitudes;
   const speeds = $gameSystem._platformSpeeds;
   const dirs = $gameSystem._platformDirs;
+  const offsets_y = $gameSystem._platformOffsets;
 
   for (let i = 0; i < ids.length; i++) {
     const id = ids[i];
@@ -432,7 +496,7 @@ if ($gameSystem._platformIds && $gameSystem._platformIds.length > 0) {
     const AMPLITUD = amplitudes[i] ?? 3;
     const VELOCIDAD = speeds[i] ?? 0.03;
     const DIR = dirs[i] ?? 0; // 0=vertical, 1=horizontal
-
+    const OFFSET_Y=offsets_y[i] ?? 1; //Offset y de posicion en la plataforma
     // Inicialización
     if (plataforma._baseX === undefined) plataforma._baseX = plataforma._realX;
     if (plataforma._baseY === undefined) plataforma._baseY = plataforma._realY;
@@ -482,7 +546,7 @@ if ($gameSystem._platformIds && $gameSystem._platformIds.length > 0) {
     if (onTop) {
       vy = 0;
       grounded = true;
-      player._realY = ey - 1;
+      player._realY = ey - OFFSET_Y;
       player._realY += (plataforma._realY - plataforma._prevRealY) || 0;
       player._realX += (plataforma._realX - plataforma._prevRealX) || 0;
     }
@@ -494,6 +558,17 @@ if ($gameSystem._platformIds && $gameSystem._platformIds.length > 0) {
 
 
   }
+function isTilePassableFromBelow(x, y) {
+    const tx = Math.floor(x);
+    const ty = Math.floor(y);
+
+    // Fuera del mapa → sólido
+    if (ty < 0 || ty >= $dataMap.height) return false;
+    if (tx < 0 || tx >= $dataMap.width) return false;
+
+    // 8 = dirección arriba
+    return $gameMap.isPassable(tx, ty, 8);
+}
 
   // Tecla espacio → saltar
   Input.keyMapper[32] = "jump";

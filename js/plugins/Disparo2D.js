@@ -1,7 +1,7 @@
 /*:
  * @target MZ
  * @plugindesc Disparo 2D robusto: colisión usando bounds globales de sprites (compatible con zoom) + control por script
- * @author 3DalbiX
+ * @author 3DalbiX (parcheado)
  *
  * @param shootSpeed
  * @text Velocidad del proyectil
@@ -47,11 +47,12 @@
  *   $gameSystem.enableShooting2D(false); // desactivar
  *
  *   // Disparar desde un evento:
- *   $gameSystem.shootProjectileFromEvent(eventId, dir, speed, seName, graphicName);
- *   // dir: 0 = izquierda, 1 = derecha
+ *   $gameSystem.shootProjectileFromEvent(eventId, dir, speed, seName, graphicName, Scale);
+ *   // dir: 0 = izquierda, 1 = derecha, 2 = auto-target (según posición del jugador)
  *   // speed: número (ej. 0.3) - si null se usa el parámetro del plugin
  *   // seName: string del SE en audio/se (ej. "Attack1") - opcional
  *   // graphicName: nombre del archivo en img/pictures (ej. "FireBall") - opcional
+ *   // Scale: Escala del grafico - opcional
  *
  */
 
@@ -127,94 +128,154 @@
             this._customSpeed = undefined;
             this._customGraphic = undefined;
             this._customSE = undefined;
+            this._customScale = undefined;
 
-
+            this._ownerEventId = null;
         }
-			checkCollisionWithPlayer() {
-    const scene = SceneManager._scene;
-    if (!scene?._spriteset?._tilemap || !this._sprite) return false;
 
-    const pGlobal = this._sprite.getGlobalPosition();
-    const margin = 6; // pixels de margen para evitar colisiones prematuras
+        checkCollisionWithPlayer() {
+            const scene = SceneManager._scene;
+            if (!scene?._spriteset?._tilemap || !this._sprite) return false;
 
-    const playerSprite = scene._spriteset._characterSprites.find(s => s._character === $gamePlayer);
-    if (!playerSprite) return false;
+            try {
+                if (typeof this._sprite.getGlobalPosition !== "function") return false;
+                const pGlobal = this._sprite.getGlobalPosition();
+                const margin = 6; // pixels de margen para evitar colisiones prematuras
 
-    const bounds = playerSprite.getBounds();
-    const left   = bounds.x + margin;
-    const right  = bounds.x + bounds.width - margin;
-    const top    = bounds.y + margin;
-    const bottom = bounds.y + bounds.height - margin;
+                const playerSprite = scene._spriteset._characterSprites.find(s => s._character === $gamePlayer);
+                if (!playerSprite) return false;
 
-    if (pGlobal.x >= left && pGlobal.x <= right && pGlobal.y >= top && pGlobal.y <= bottom) {
-        // activar Self Switch D del evento propietario
-        if (this._ownerEventId != null) {
-            const key = [$gameMap.mapId(), this._ownerEventId, "D"];
-            $gameSelfSwitches.setValue(key, true);
+                const bounds = playerSprite.getBounds();
+                const left   = bounds.x + margin;
+                const right  = bounds.x + bounds.width - margin;
+                const top    = bounds.y + margin;
+                const bottom = bounds.y + bounds.height - margin;
+
+                if (pGlobal.x >= left && pGlobal.x <= right && pGlobal.y >= top && pGlobal.y <= bottom) {
+                    // activar Self Switch D del evento propietario
+                    if (this._ownerEventId != null) {
+                        const key = [$gameMap.mapId(), this._ownerEventId, "D"];
+                        $gameSelfSwitches.setValue(key, true);
+                    }
+                    return true;
+                }
+            } catch (e) {
+                // Si algo falla al obtener posición global, asumimos no colisión y seguimos.
+                return false;
+            }
+
+            return false;
         }
-        return true;
-    }
 
-    return false;
-}
         createSprite() {
             if (this._sprite) return;
             const scene = SceneManager._scene;
-            if (!scene?._spriteset?._tilemap) return;
+            const tilemap = scene?._spriteset?._tilemap;
+            if (!tilemap) return;
 
             // elegir bmp: personalizado o global
             const graphicName = this._customGraphic || $gameSystem.getProjectileGraphic2D() || GRAPHIC;
             const bmp = ImageManager.loadPicture(graphicName);
 
             const sprite = new Sprite(bmp);
-            sprite.anchor.set(0.5, 0.5);
-            // flip horizontal cuando es izquierda (mantener apariencia)
-const finalScale = (this._customScale !== undefined ? this._customScale : SCALE);
+            // asegurarse de que anchor existe (Sprite de Pixi)
+            if (sprite.anchor && typeof sprite.anchor.set === "function") {
+                sprite.anchor.set(0.5, 0.5);
+            }
 
-// flip horizontal si va a la izquierda
-const sx = finalScale * (this._dir === 4 ? -1 : 1);
-const sy = finalScale;
-
-sprite.scale.set(sx, sy);
-
+            const finalScale = (this._customScale !== undefined ? this._customScale : SCALE);
+            const sx = finalScale * (this._dir === 4 ? -1 : 1);
+            const sy = finalScale;
+            if (sprite.scale && typeof sprite.scale.set === "function") sprite.scale.set(sx, sy);
 
             // Posición en píxeles dentro del tilemap (child del tilemap)
-            sprite.x = this.x * $gameMap.tileWidth();
-            sprite.y = this.y * $gameMap.tileHeight();
+            try {
+                sprite.x = this.x * $gameMap.tileWidth();
+                sprite.y = this.y * $gameMap.tileHeight();
+            } catch (e) {
+                // fallback: en caso de que $gameMap no esté listo, posicionar en 0 y salir
+                sprite.x = 0;
+                sprite.y = 0;
+            }
 
-            scene._spriteset._tilemap.addChild(sprite);
-            this._sprite = sprite;
+            // Añadir al tilemap SOLO si existe y es un contenedor válido
+            try {
+                if (tilemap && typeof tilemap.addChild === "function") {
+                    tilemap.addChild(sprite);
+                    this._sprite = sprite;
+                }
+            } catch (e) {
+                // si falló addChild, asegurarse de no dejar referencia colgante
+                try { sprite.destroy && sprite.destroy({ children: true }); } catch (_) {}
+                this._sprite = null;
+            }
         }
 
         update() {
             if (!this._alive) return;
+
+            const scene = SceneManager._scene;
+            const tilemap = scene?._spriteset?._tilemap;
+
+            // Si no hay tilemap (p. ej. cambio de mapa/escena, AutoZoom re-crea tilemap), destruir el proyectil
+            if (!tilemap) {
+                this.destroy();
+                return;
+            }
+
             if (!this._sprite) this.createSprite();
+
+            // Si no se pudo crear el sprite, abortar
+            if (!this._sprite) return;
+
+            // Si el sprite perdió su padre (parent), significa que el tilemap fue cambiado o eliminado → destruir
+            if (!this._sprite.parent) {
+                this.destroy();
+                return;
+            }
 
             // Velocidad efectiva: custom o global
             const currentSpeed = (this._customSpeed !== undefined) ? this._customSpeed : SPEED;
             const step = (this._dir === 6 ? currentSpeed : -currentSpeed);
 
-            // Movimiento
+            // Movimiento (en tiles)
             this.x += step;
             this._distance += Math.abs(step);
 
-            if (this._sprite) {
-                this._sprite.x = this.x * $gameMap.tileWidth();
-                this._sprite.y = this.y * $gameMap.tileHeight();
+            // mover solo si parent existe y map tile sizes disponibles
+            try {
+                const tw = $gameMap.tileWidth();
+                const th = $gameMap.tileHeight();
+                // solo asignar si parent sigue existiendo
+                if (this._sprite && this._sprite.parent) {
+                    this._sprite.x = this.x * tw;
+                    this._sprite.y = this.y * th;
+                }
+            } catch (e) {
+                // si algo falla al leer tileWidth/tileHeight, destruimos para evitar crashes posteriores
+                this.destroy();
+                return;
             }
 
             this._framesAlive++;
 
             // Detectar colisión VISUAL usando bounds globales del sprite del evento
-            if (this._sprite && this.checkEventCollisionUsingGlobalBounds()) {
+            try {
+                if (this._sprite && this.checkEventCollisionUsingGlobalBounds()) {
+                    this.destroy();
+                    return;
+                }
+
+                if (this._sprite && this.checkCollisionWithPlayer()) {
+                    this.destroy();
+                    return;
+                }
+            } catch (e) {
+                // proteger: si check lanza error, destruimos el proyectil para evitar bucle de errores
                 this.destroy();
                 return;
             }
-// detecta colisión con jugador
-if (this._sprite && this.checkCollisionWithPlayer()) {
-    this.destroy();
-    return;
-}
+
             if (this._distance >= RANGE) {
                 this.destroy();
             }
@@ -225,35 +286,36 @@ if (this._sprite && this.checkCollisionWithPlayer()) {
             const spriteset = scene?._spriteset;
             if (!spriteset || !this._sprite) return false;
 
-            // Obtener posición global (pantalla) del proyectil
-            const pGlobal = this._sprite.getGlobalPosition(); // coordenadas en pantalla
-            // margin en píxeles para ajustar sensibilidad (sube para retrasar impacto)
-            const margin = 6;
+            try {
+                if (typeof this._sprite.getGlobalPosition !== "function") return false;
+                const pGlobal = this._sprite.getGlobalPosition();
+                const margin = 6;
 
-            // Iterar eventos y comparar contra bounds global del sprite del evento
-            for (const ev of $gameMap.events()) {
-                if (!ev || ev._erased) continue;
+                for (const ev of $gameMap.events()) {
+                    if (!ev || ev._erased) continue;
 
-                // Buscar sprite correspondiente
-                const evSprite = spriteset._characterSprites && spriteset._characterSprites.find(s => s._character === ev);
-                if (!evSprite) continue;
+                    const evSprite = spriteset._characterSprites && spriteset._characterSprites.find(s => s._character === ev);
+                    if (!evSprite) continue;
 
-                // Obtener bounds global del sprite del evento
-                const evBounds = evSprite.getBounds();
+                    // algunos sprites pueden no exponer getBounds; proteger
+                    if (!evSprite.getBounds || typeof evSprite.getBounds !== "function") continue;
 
-                // Aplicar margen (reducir bounds interiormente) para evitar impactos prematuros:
-                const left = evBounds.x + margin;
-                const right = evBounds.x + evBounds.width - margin;
-                const top = evBounds.y + margin;
-                const bottom = evBounds.y + evBounds.height - margin;
+                    const evBounds = evSprite.getBounds();
+                    const left = evBounds.x + margin;
+                    const right = evBounds.x + evBounds.width - margin;
+                    const top = evBounds.y + margin;
+                    const bottom = evBounds.y + evBounds.height - margin;
 
-                // Comparación punto vs rectángulo
-                if (pGlobal.x >= left && pGlobal.x <= right && pGlobal.y >= top && pGlobal.y <= bottom) {
-                    // Activar self switch C inmediatamente
-                    const key = [$gameMap.mapId(), ev.eventId(), "C"];
-                    $gameSelfSwitches.setValue(key, true);
-                    return true;
+                    if (pGlobal.x >= left && pGlobal.x <= right && pGlobal.y >= top && pGlobal.y <= bottom) {
+                        // Activar self switch C inmediatamente
+                        const key = [$gameMap.mapId(), ev.eventId(), "C"];
+                        $gameSelfSwitches.setValue(key, true);
+                        return true;
+                    }
                 }
+            } catch (e) {
+                // en caso de error durante cálculo de bounds, no colisionar
+                return false;
             }
 
             return false;
@@ -261,10 +323,15 @@ if (this._sprite && this.checkCollisionWithPlayer()) {
 
         destroy() {
             this._alive = false;
-            if (this._sprite && SceneManager._scene?._spriteset?._tilemap) {
+            if (this._sprite) {
                 try {
-                    SceneManager._scene._spriteset._tilemap.removeChild(this._sprite);
+                    // quitar del parent solo si existe
+                    if (this._sprite.parent && typeof this._sprite.parent.removeChild === "function") {
+                        this._sprite.parent.removeChild(this._sprite);
+                    }
                 } catch (_) {}
+                try { this._sprite.destroy && this._sprite.destroy({ children: true }); } catch (_) {}
+                this._sprite = null;
             }
         }
     }
@@ -325,14 +392,18 @@ if (this._sprite && this.checkCollisionWithPlayer()) {
 
         // Update de proyectiles del jugador
         if (this._projectiles2D) {
-            for (const p of this._projectiles2D) p.update();
+            for (const p of this._projectiles2D) {
+                try { p.update(); } catch (e) { /* proteger */ }
+            }
             this._projectiles2D = this._projectiles2D.filter(p => p._alive);
         }
 
         // Update de proyectiles globales (eventos)
         if ($gameTemp) {
             $gameTemp._globalProjectiles2D = $gameTemp._globalProjectiles2D || [];
-            for (const p of $gameTemp._globalProjectiles2D) p.update();
+            for (const p of $gameTemp._globalProjectiles2D) {
+                try { p.update(); } catch (e) { /* proteger */ }
+            }
             $gameTemp._globalProjectiles2D = $gameTemp._globalProjectiles2D.filter(p => p._alive);
         }
     };
@@ -343,56 +414,39 @@ if (this._sprite && this.checkCollisionWithPlayer()) {
         AudioManager.playSe({ name: SE_NAME, pan: 0, pitch: 100, volume: 90 });
         const dir = this.direction(); // 4=izq,6=der
         if (![4, 6].includes(dir)) return;
-/*
-        const sprite = SceneManager._scene?._spriteset?._characterSprites.find(s => s._character === this);
-        let startX = this._realX;
-        let startY = this._realY + Y_OFFSET;
+
+        const sprite = SceneManager._scene._spriteset._characterSprites?.find(s => s._character === this);
+
+        let startX_px, startY_px;
+
         if (sprite) {
-            const tileHeight = $gameMap.tileHeight();
-            const torsoOffset = 0.55;  // ajuste vertical visual
-            startY = sprite.y / tileHeight - torsoOffset + Y_OFFSET;
+            // posición visual dentro del tilemap
+            startX_px = sprite.x;
+            startY_px = sprite.y;
+
+            // ajustar altura del torso
+            const torsoOffsetPx = 0.55 * $gameMap.tileHeight();
+            startY_px -= torsoOffsetPx;
+
+            // lateral según dirección
+            const halfWidthPx = (sprite.width * sprite.scale.x) / 2;
+            const marginPx = 2; // margen visual
+            if (dir === 6) startX_px += halfWidthPx + marginPx; // derecha
+            if (dir === 4) startX_px -= halfWidthPx + marginPx; // izquierda
+        } else {
+            // fallback en tiles convertido a píxeles
+            startX_px = this._realX * $gameMap.tileWidth();
+            startY_px = this._realY * $gameMap.tileHeight();
+            if (dir === 6) startX_px += 8;
+            if (dir === 4) startX_px -= 8;
         }
 
-        // offset lateral (valor fijo como en tu plugin original)
-        const offset = 4.0;
-        if (dir === 6) startX += offset;
-        if (dir === 4) startX += offset;
-*/
-//-----------
-const sprite = SceneManager._scene._spriteset._characterSprites?.find(s => s._character === this);
+        // convertir a coordenadas en tiles para la lógica del proyectil
+        const startX = startX_px / $gameMap.tileWidth();
+        const startY = startY_px / $gameMap.tileHeight();
 
-let startX_px, startY_px;
-
-if (sprite) {
-    // posición visual dentro del tilemap
-    startX_px = sprite.x;
-    startY_px = sprite.y;
-
-    // ajustar altura del torso
-    const torsoOffsetPx = 0.55 * $gameMap.tileHeight();
-    startY_px -= torsoOffsetPx;
-
-    // lateral según dirección
-    const halfWidthPx = (sprite.width * sprite.scale.x) / 2;
-    const marginPx = 2; // margen visual
-    if (dir === 6) startX_px += halfWidthPx + marginPx; // derecha
-    if (dir === 4) startX_px -= halfWidthPx + marginPx; // izquierda
-} else {
-    // fallback en tiles convertido a píxeles
-    startX_px = this._realX * $gameMap.tileWidth();
-    startY_px = this._realY * $gameMap.tileHeight();
-    if (dir === 6) startX_px += 8;
-    if (dir === 4) startX_px -= 8;
-}
-
-// convertir a coordenadas en tiles para la lógica del proyectil
-const startX = startX_px / $gameMap.tileWidth();
-const startY = startY_px / $gameMap.tileHeight();
-
-
-//------------------
         const p = new Projectile(startX, startY, dir);
-		
+
         this._projectiles2D.push(p);
     };
 
@@ -420,84 +474,79 @@ const startY = startY_px / $gameMap.tileHeight();
     // -------------------------------------------------------
     // Función pública: disparar desde un evento por script
     // Uso: $gameSystem.shootProjectileFromEvent(evId, dir, speed, seName, graphic)
-    // dir: 0 = izquierda, 1 = derecha
+    // dir: 0 = izquierda, 1 = derecha, 2 = autoselect según jugador
     // -------------------------------------------------------
-Game_System.prototype.shootProjectileFromEvent = function(eventId, dir, speed, seName, graphic, scale) {
+    Game_System.prototype.shootProjectileFromEvent = function(eventId, dir, speed, seName, graphic, scale) {
         const ev = $gameMap.event(eventId);
         if (!ev) return;
-// ==========================================================
-// AUTO-TARGET (dir = 2) → disparar según la posición del jugador
-// ==========================================================
-if (dir === 2) {
-    const playerX = $gamePlayer._realX;
-    const eventX = ev._realX;
 
-    // Si el jugador está a la derecha → disparar derecha (6)
-    // Si está a la izquierda → disparar izquierda (4)
-    dir = (playerX > eventX ? 1 : 0);
-}
+        // AUTO-TARGET (dir = 2) → disparar según la posición del jugador
+        if (dir === 2) {
+            const playerX = $gamePlayer._realX;
+            const eventX = ev._realX;
+            dir = (playerX > eventX ? 1 : 0);
+        }
 
         // reproducir sonido si se especifica (o usar null para omitir)
         if (seName) {
-            AudioManager.playSe({ name: seName, pan: 0, pitch: 100, volume: 90 });
+            try { AudioManager.playSe({ name: seName, pan: 0, pitch: 100, volume: 90 }); } catch (e) {}
         }
 
         const realDir = (dir === 0 ? 4 : 6);
 
-const sprite = SceneManager._scene._spriteset._characterSprites?.find(s => s._character === ev);
+        const sprite = SceneManager._scene._spriteset._characterSprites?.find(s => s._character === ev);
 
-let startX = ev._realX; // fallback
-let startY = ev._realY;
+        let startX = ev._realX; // fallback
+        let startY = ev._realY;
 
-if (sprite) {
-    const tileHeight = $gameMap.tileHeight();
-    const tileWidth = $gameMap.tileWidth();
-    const torsoOffset = 0.55;
-    startY = sprite.y / tileHeight - torsoOffset;
+        if (sprite) {
+            const tileHeight = $gameMap.tileHeight();
+            const tileWidth = $gameMap.tileWidth();
+            const torsoOffset = 0.55;
+            startY = sprite.y / tileHeight - torsoOffset;
 
-    // posición en pixels dentro del tilemap
-    const spriteX = sprite.x;
-    const halfWidthPx = (sprite.width * sprite.scale.x) / 2;
-    const marginPx = 2; // pequeño margen en pixels
+            // posición en pixels dentro del tilemap
+            const spriteX = sprite.x;
+            const halfWidthPx = (sprite.width * sprite.scale.x) / 2;
+            const marginPx = 2; // pequeño margen en pixels
 
-    // calcular startX en tiles según dirección
-    if (realDir === 6) { // derecha
-        startX = (spriteX + halfWidthPx + marginPx) / tileWidth;
-    } else if (realDir === 4) { // izquierda
-        startX = (spriteX - halfWidthPx - marginPx) / tileWidth;
-    }
-} else {
-    // fallback en tiles
-    startX += (realDir === 6 ? 0.5 : -0.5);
-}
-
-
-
+            // calcular startX en tiles según dirección
+            if (realDir === 6) { // derecha
+                startX = (spriteX + halfWidthPx + marginPx) / tileWidth;
+            } else if (realDir === 4) { // izquierda
+                startX = (spriteX - halfWidthPx - marginPx) / tileWidth;
+            }
+        } else {
+            // fallback en tiles
+            startX += (realDir === 6 ? 0.5 : -0.5);
+        }
 
         const p = new Projectile(startX, startY, realDir);
-p._ownerEventId = eventId;
+        p._ownerEventId = eventId;
         // aplicar parámetros personalizados si se pasaron
         if (typeof speed === "number") p._customSpeed = speed;
         if (typeof graphic === "string" && graphic.length > 0) p._customGraphic = graphic;
         if (typeof seName === "string" && seName.length > 0) p._customSE = seName;
-		if (typeof scale === "number") p._customScale = scale;
-
+        if (typeof scale === "number") p._customScale = scale;
 
         // push al contenedor global de proyectiles (inicializa si hace falta)
         $gameTemp._globalProjectiles2D = $gameTemp._globalProjectiles2D || [];
         $gameTemp._globalProjectiles2D.push(p);
     };
-// ===============================
-//  FIX: FORZAR UPDATE GLOBAL SIEMPRE
-// ===============================
-const _Spriteset_Map_update = Spriteset_Map.prototype.update;
-Spriteset_Map.prototype.update = function() {
-    _Spriteset_Map_update.call(this);
 
-    if ($gameTemp && $gameTemp._globalProjectiles2D) {
-        for (const p of $gameTemp._globalProjectiles2D) p.update();
-        $gameTemp._globalProjectiles2D = $gameTemp._globalProjectiles2D.filter(p => p._alive);
-    }
-};
+    // ===============================
+    //  FIX: FORZAR UPDATE GLOBAL SIEMPRE
+    // ===============================
+    const _Spriteset_Map_update = Spriteset_Map.prototype.update;
+    Spriteset_Map.prototype.update = function() {
+        _Spriteset_Map_update.call(this);
 
-})(); 
+        if ($gameTemp && $gameTemp._globalProjectiles2D) {
+            for (const p of $gameTemp._globalProjectiles2D) {
+                try { p.update(); } catch (e) { /* proteger */ }
+            }
+            $gameTemp._globalProjectiles2D = $gameTemp._globalProjectiles2D.filter(p => p._alive);
+        }
+    };
+
+})();
