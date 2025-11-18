@@ -40,19 +40,8 @@
  */
 
 (() => {
-    const PLUGIN_NAME = "Disparo2D";
-    const params = PluginManager.parameters(PLUGIN_NAME);
-
-    const SPEED = Number(params["shootSpeed"] || 0.25);
-    const RANGE = Number(params["shootRange"] || 8);
-    const SE_NAME = String(params["shootSE"] || "Attack3");
-    const GRAPHIC = String(params["projectileGraphic"] || "Bullet");
-    const SCALE = Number(params["projectileScale"] || 1.0);
-    const Y_OFFSET = Number(params["projectileYOffset"] || 0);
-
-    Input.keyMapper[65] = "shoot";
 	
-	    function getRuntimeEnvironment() {
+		    function getRuntimeEnvironment() {
       const isNode = Utils.isNwjs();
       const isAndroidApp = !!window.AndroidInterface;
       const ua = navigator.userAgent || "";
@@ -67,6 +56,20 @@
         isWeb: !isNode
       };
     }
+	
+    const PLUGIN_NAME = "Disparo2D";
+    const params = PluginManager.parameters(PLUGIN_NAME);
+
+    const SPEED = Number(params["shootSpeed"] || 0.25);
+    const RANGE = Number(params["shootRange"] || 8);
+    const SE_NAME = String(params["shootSE"] || "Attack3");
+    const GRAPHIC = String(params["projectileGraphic"] || "Bullet");
+    const SCALE = Number(params["projectileScale"] || 1.0);
+    const Y_OFFSET = Number(params["projectileYOffset"] || 0);
+
+    Input.keyMapper[65] = "shoot";
+	
+
 
     // ------------------------------------------------------------
     // MODIFICADO ► enableShooting2D pasa SE, Gráfico, Escala y Anim
