@@ -246,29 +246,36 @@
         }
 
         update() {
-            if (!this._alive) return;
+    if (!this._alive) return;
 
-            const scene = SceneManager._scene;
-            const tilemap = scene?._spriteset?._tilemap;
+    const scene = SceneManager._scene;
+    const tilemap = scene?._spriteset?._tilemap;
 
-            if (!tilemap) return this.destroy();
-            if (!this._sprite) this.createSprite();
-            if (!this._sprite) return;
+    if (!tilemap) return this.destroy();
+    if (!this._sprite) this.createSprite();
+    if (!this._sprite) return;
+    if (!this._sprite.parent) return this.destroy();
 
-            if (!this._sprite.parent) return this.destroy();
+    const currentSpeed = this._customSpeed ?? SPEED;
 
-            const currentSpeed = this._customSpeed ?? SPEED;
-            const step = (this._dir === 6 ? currentSpeed : -currentSpeed);
-            this.x += step;
-            this._distance += Math.abs(step);
+    // Mover según dirección
+    let step = 0;
+    switch(this._dir) {
+        case 4: step = -currentSpeed; this.x += step; break; // izquierda
+        case 6: step = currentSpeed; this.x += step; break;  // derecha
+        case 8: step = -currentSpeed; this.y += step; break; // arriba
+        case 2: step = currentSpeed; this.y += step; break;  // abajo
+    }
+    this._distance += Math.abs(step);
 
-            this._sprite.x = this.x * $gameMap.tileWidth();
-            this._sprite.y = this.y * $gameMap.tileHeight();
+    // Actualizar posición del sprite
+    this._sprite.x = this.x * $gameMap.tileWidth();
+    this._sprite.y = this.y * $gameMap.tileHeight();
 
-            if (this.checkEventCollisionUsingGlobalBounds()) return this.destroy();
-            if (this.checkCollisionWithPlayer()) return this.destroy();
+    if (this.checkEventCollisionUsingGlobalBounds()) return this.destroy();
+    if (this.checkCollisionWithPlayer()) return this.destroy();
 
-            if (this._distance >= RANGE) return this.destroy();
+    if (this._distance >= RANGE) return this.destroy();
         }
     }
 
@@ -305,33 +312,50 @@
         }
     };
 
-    Game_Player.prototype.shootProjectile = function() {
-        if (!$gameSystem.isShooting2DEnabled()) return;
+Game_Player.prototype.shootProjectile = function() {
+    if (!$gameSystem.isShooting2DEnabled()) return;
 
-        const seUsed = $gameSystem._shootSE_Player || SE_NAME;
-        AudioManager.playSe({ name: seUsed, pan: 0, pitch: 100, volume: 90 });
+    const seUsed = $gameSystem._shootSE_Player || SE_NAME;
+    AudioManager.playSe({ name: seUsed, pan: 0, pitch: 100, volume: 90 });
 
-        const dir = this.direction();
+    let dir = this.direction();
+
+    // Detectar si Plataforma2D está activa
+    const platformerActive = $gameSystem.isPlatformer2DActive && $gameSystem.isPlatformer2DActive();
+
+    if (platformerActive) {
+        // Solo horizontal
         if (![4,6].includes(dir)) return;
+    } else {
+        // Permitir todas las direcciones
+        if (![2,4,6,8].includes(dir)) return;
+    }
 
-        const sprite = SceneManager._scene._spriteset._characterSprites.find(s => s._character === this);
-        let startX_px = sprite.x;
-        let startY_px = sprite.y - 0.55 * $gameMap.tileHeight();
+    const sprite = SceneManager._scene._spriteset._characterSprites.find(s => s._character === this);
+    let startX_px = sprite.x;
+    let startY_px = sprite.y - 0.55 * $gameMap.tileHeight();
 
-        const halfWidthPx = (sprite.width * sprite.scale.x) / 2;
-        if (dir === 6) startX_px += halfWidthPx + 2;
-        if (dir === 4) startX_px -= halfWidthPx + 2;
+    const halfWidthPx  = (sprite.width * sprite.scale.x) / 2;
+    const halfHeightPx = (sprite.height * sprite.scale.y) / 2;
 
-        const startX = startX_px / $gameMap.tileWidth();
-        const startY = startY_px / $gameMap.tileHeight();
+    switch(dir) {
+        case 4: startX_px -= halfWidthPx + 2; break; // izquierda
+        case 6: startX_px += halfWidthPx + 2; break; // derecha
+        case 8: startY_px -= halfHeightPx + 2; break; // arriba
+        case 2: startY_px += halfHeightPx + 2; break; // abajo
+    }
 
-        const p = new Projectile(startX, startY, dir);
-        p._customGraphic = $gameSystem._projectileGraphic_Player;
-        p._customScale = $gameSystem._projectileScale_Player;
-        p._customImpact = $gameSystem._projectileImpact_Player;
+    const startX = startX_px / $gameMap.tileWidth();
+    const startY = startY_px / $gameMap.tileHeight();
 
-        this._projectiles2D.push(p);
-    };
+    const p = new Projectile(startX, startY, dir);
+    p._customGraphic = $gameSystem._projectileGraphic_Player;
+    p._customScale   = $gameSystem._projectileScale_Player;
+    p._customImpact  = $gameSystem._projectileImpact_Player;
+
+    if (!this._projectiles2D) this._projectiles2D = [];
+    this._projectiles2D.push(p);
+};
 
     // --------------------------------------------------------
     // EVENTOS DISPARANDO
