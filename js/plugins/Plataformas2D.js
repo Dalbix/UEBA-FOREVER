@@ -183,84 +183,88 @@ if (!isTouchPlatform) {
 $gameSystem._lastPlatformTapFrame = Graphics.frameCount;
   }  
 } else {
-    // --- TOUCH EN ANDROID ---
+// --- TOUCH PLATFORM ---
+// Coordenadas del jugador en pantalla (centrado)
+const px = Graphics.width / 2;
+const py = Graphics.height / 2;
 
-    // Coordenadas del jugador en pantalla
-    const px = $gamePlayer.screenX();
-    const py = $gamePlayer.screenY();
+if (TouchInput.isTriggered()) {
+    player._touchHoldFrames = 0;
+    player._touchLongHandled = false;
+    player._touchStartX = TouchInput.x;
+    player._touchStartY = TouchInput.y;
+}
 
-    if (TouchInput.isTriggered()) {
-        player._touchHoldFrames = 0;
-        player._touchLongHandled = false;
+if (TouchInput.isPressed()) {
+    player._touchHoldFrames++;
 
-        player._tapStartX = TouchInput.x;
-        player._tapStartY = TouchInput.y;
+    // si se mantiene → movimiento lateral (igual que antes)
+    if (player._touchHoldFrames >= HOLD_THRESHOLD) {
+        const tx = TouchInput.x;
+
+        if (tx < px - 60) {
+            dx = -HORIZONTAL_SPEED;
+            player.setDirection(4);
+            player._touchLastDir = -1;
+        } else if (tx > px + 60) {
+            dx = HORIZONTAL_SPEED;
+            player.setDirection(6);
+            player._touchLastDir = 1;
+        } else {
+            dx = 0;
+        }
+
+        player._touchLongHandled = true;
     }
+}
 
-    if (TouchInput.isPressed()) {
-        player._touchHoldFrames = (player._touchHoldFrames || 0) + 1;
+if (TouchInput.isReleased()) {
 
-        // Si mantiene → movimiento continuo lateral
-        if (player._touchHoldFrames >= HOLD_THRESHOLD) {
-            const touchX = TouchInput.x;
+    // === TAP (sin long press) → SALTO ===
+    if (!player._touchLongHandled && grounded) {
 
-            if (touchX < px - 60) {
-                dx = -HORIZONTAL_SPEED;
-                player.setDirection(4);
-                player._touchLastDir = -1;
-            } else if (touchX > px + 60) {
-                dx = HORIZONTAL_SPEED;
-                player.setDirection(6);
-                player._touchLastDir = 1;
-            }
-            player._touchLongHandled = true;
+        const tx = player._touchStartX;
+        const ty = player._touchStartY;
+
+        // ------------------------------
+        //   ZONAS DE SALTO:
+        //   - Encima del pj → salto vertical
+        //   - Delante del pj → salto hacia adelante
+        //   - Detrás del pj → salto hacia atrás
+        // ------------------------------
+
+        const facing = player.direction(); // 4 izq, 6 der
+
+        const isAbove = (ty < py - 50);       // zona superior
+        const isRight = (tx > px + 40);
+        const isLeft  = (tx < px - 40);
+
+        if (isAbove) {
+            // SALTO VERTICAL
+            dx = 0;
+            shouldJump = true;
+
+        } else if (facing === 6 && isRight) {
+            // mirando derecha y tap delante → salto adelante
+            dx = HORIZONTAL_SPEED;
+            shouldJump = true;
+
+        } else if (facing === 4 && isLeft) {
+            // mirando izquierda y tap delante → salto adelante
+            dx = -HORIZONTAL_SPEED;
+            shouldJump = true;
+
+        } else {
+            // tap en la espalda → salto hacia atrás
+            dx = (facing === 6 ? -HORIZONTAL_SPEED : HORIZONTAL_SPEED);
+            shouldJump = true;
         }
     }
 
-    if (TouchInput.isReleased()) {
+    player._touchHoldFrames = 0;
+    player._touchLongHandled = false;
+}
 
-        // Si es TAP → determinar tipo de salto
-        if (!player._touchLongHandled && grounded) {
-
-            const tx = player._tapStartX;
-            const ty = player._tapStartY;
-
-            // 1) SALTO HACIA ARRIBA (tap encima del jugador visualmente)
-            if (ty < py - 32) {
-                vy = -JUMP;
-                grounded = false;
-                dx = 0;  // salto totalmente vertical
-                AudioManager.playSe({ name: JUMP_SE_NAME, pan: 0, pitch: 100, volume: 90 });
-            }
-
-            // 2) SALTO HACIA ADELANTE
-            else if (tx > px) {
-                vy = -JUMP;
-                grounded = false;
-                dx = HORIZONTAL_SPEED * 1.5;
-                player.setDirection(6);
-                AudioManager.playSe({ name: JUMP_SE_NAME, pan: 0, pitch: 100, volume: 90 });
-            }
-
-            // 3) SALTO HACIA ATRÁS
-            else if (tx < px) {
-                vy = -JUMP;
-                grounded = false;
-                dx = -HORIZONTAL_SPEED * 1.5;
-                player.setDirection(4);
-                AudioManager.playSe({ name: JUMP_SE_NAME, pan: 0, pitch: 100, volume: 90 });
-            }
-        }
-
-        player._touchHoldFrames = 0;
-        player._touchLongHandled = false;
-    }
-
-    // Arrastre direccional mientras está en el aire
-    if (!grounded && player._touchLastDir) {
-        dx = player._touchLastDir * HORIZONTAL_SPEED;
-        player.setDirection(player._touchLastDir === -1 ? 4 : 6);
-    }
 }
 
 // Ejecutar salto si corresponde
