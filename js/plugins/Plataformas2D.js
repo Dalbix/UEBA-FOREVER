@@ -99,11 +99,21 @@
   });
 
   // Inicialización segura del flag global
-  const _Game_System_initialize = Game_System.prototype.initialize;
-  Game_System.prototype.initialize = function() {
-    _Game_System_initialize.call(this);
-    this._plataforma2DActiva = false;
-  };
+const _Game_System_initialize = Game_System.prototype.initialize;
+Game_System.prototype.initialize = function() {
+  _Game_System_initialize.call(this);
+
+  // Inicialización del modo plataforma
+  this._plataforma2DActiva = false;
+
+  // Inicialización de plataformas móviles
+  this._platformIds = [];
+  this._platformAmplitudes = [];
+  this._platformSpeeds = [];
+  this._platformDirs = [];
+  this._platformOffsets = [];
+};
+
 
   // === NUEVO BLOQUE: configuración de plataformas por mapa ===
   Game_System.prototype.setPlatforms = function(ids, amplitudes, speeds, dirs, offsets) {
@@ -115,16 +125,7 @@
     console.log("[Plataformas2D] Configuradas plataformas dinámicas:", this._platformIds);
   };
 
-  // Inicializa vacío (segundo initialize para plataformas)
-  const _Game_System_initialize_Platforms = Game_System.prototype.initialize;
-  Game_System.prototype.initialize = function() {
-    _Game_System_initialize_Platforms.call(this);
-    this._platformIds = [];
-    this._platformAmplitudes = [];
-    this._platformSpeeds = [];
-    this._platformDirs = [];
-    this._platformOffsets = [];
-  };
+ 
 
   // Comandos
   PluginManager.registerCommand("Plataformas2D", "activar", () => {
@@ -563,6 +564,17 @@
       }
     }
   });
+const _Game_Player_performTransfer = Game_Player.prototype.performTransfer;
+Game_Player.prototype.performTransfer = function() {
+  _Game_Player_performTransfer.call(this);
+
+  if ($gameSystem._plataforma2DActiva) {
+    this._realX = this.x;
+    this._realY = this.y;
+    vy = 0;
+    grounded = true;
+  }
+};
 
   // Tecla espacio → saltar
   Input.keyMapper[32] = "jump";
