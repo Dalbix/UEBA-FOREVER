@@ -575,6 +575,26 @@ Game_Player.prototype.performTransfer = function() {
     grounded = true;
   }
 };
+// ============================================
+// FIX UNIVERSAL: Reiniciar estado al cargar partida
+// ============================================
+const _Scene_Load_onLoadSuccess = Scene_Load.prototype.onLoadSuccess;
+Scene_Load.prototype.onLoadSuccess = function() {
+  _Scene_Load_onLoadSuccess.call(this);
+
+  if ($gameSystem._plataforma2DActiva) {
+    const p = $gamePlayer;
+
+    p._realX = p.x;
+    p._realY = p.y;
+    p._prevRealY = p._realY;
+
+    vy = 0;
+    grounded = true;
+
+    console.log("[Plataformas2D] Estado reiniciado tras cargar partida.");
+  }
+};
 
   // Tecla espacio → saltar
   Input.keyMapper[32] = "jump";
