@@ -54,23 +54,20 @@
     ch._zoomDuration = 0;
   }
 
-  // ---------------------------------------------------------
-  // B: Reset automático al crear los sprites del mapa
-  // ---------------------------------------------------------
+// ---------------------------------------------------------
+// Reset SOLO cuando se cambia de mapa
+// ---------------------------------------------------------
 
-  const _Spriteset_Map_createCharacters =
-    Spriteset_Map.prototype.createCharacters;
+const _Game_Player_performTransfer = Game_Player.prototype.performTransfer;
+Game_Player.prototype.performTransfer = function() {
+  _Game_Player_performTransfer.call(this);
 
-  Spriteset_Map.prototype.createCharacters = function() {
-
-    // Resetear SIEMPRE zoom antes de crear sprites
-    hardResetZoom($gamePlayer);
-    for (const ev of $gameMap.events()) {
-      hardResetZoom(ev);
-    }
-
-    _Spriteset_Map_createCharacters.call(this);
-  };
+  // Reset seguro SOLO al cambiar de mapa
+  hardResetZoom($gamePlayer);
+  for (const ev of $gameMap.events()) {
+    hardResetZoom(ev);
+  }
+};
 
   // ---------------------------------------------------------
   // C: Sprite_Character (aplicación del zoom)
