@@ -1,7 +1,7 @@
 /*:
  * @target MZ
- * @plugindesc Plataforma 2D con salto lento, colisiones precisas y soporte para autozoom activo. (Versión save-safe)
- * @author 3DalbiX
+ * @plugindesc Plataforma 2D con salto lento, colisiones precisas y soporte para autozoom activo.
+ * @author 3DalbiX / ChatGPT
  *
  * @param desplazamiento
  * @text Desplazamiento horizontal total (tiles durante el salto)
@@ -61,13 +61,16 @@
   const JUMP = GRAVITY * FRAMES_SUBIDA;
   const HORIZONTAL_SPEED = DESPLAZAMIENTO / FRAMES_TOTAL;
 
+  let vy = 0;
+  let grounded = false;
+
   Game_System.prototype.isPlatformer2DActive = function() {
     return !!this._plataforma2DActiva;
   };
 
   function getRuntimeEnvironment() {
     const isNode = Utils.isNwjs();
-    const isAndroidApp = !!(window && window.AndroidInterface);
+    const isAndroidApp = !!window.AndroidInterface;
     const ua = navigator.userAgent || "";
     const isAndroidWeb = /Android/i.test(ua) && !isNode && !isAndroidApp;
     const isWindowsWeb = /Windows/i.test(ua) && !isNode;
@@ -95,21 +98,22 @@
     userAgent: navigator.userAgent
   });
 
-  // === Inicialización única y segura del Game_System ===
-  const _Game_System_initialize = Game_System.prototype.initialize;
-  Game_System.prototype.initialize = function() {
-    _Game_System_initialize.call(this);
+  // Inicialización segura del flag global
+const _Game_System_initialize = Game_System.prototype.initialize;
+Game_System.prototype.initialize = function() {
+  _Game_System_initialize.call(this);
 
-    // Inicialización del modo plataforma
-    this._plataforma2DActiva = false;
+  // Inicialización del modo plataforma
+  this._plataforma2DActiva = false;
 
-    // Inicialización de plataformas móviles
-    this._platformIds = [];
-    this._platformAmplitudes = [];
-    this._platformSpeeds = [];
-    this._platformDirs = [];
-    this._platformOffsets = [];
-  };
+  // Inicialización de plataformas móviles
+  this._platformIds = [];
+  this._platformAmplitudes = [];
+  this._platformSpeeds = [];
+  this._platformDirs = [];
+  this._platformOffsets = [];
+};
+
 
   // === NUEVO BLOQUE: configuración de plataformas por mapa ===
   Game_System.prototype.setPlatforms = function(ids, amplitudes, speeds, dirs, offsets) {
@@ -121,16 +125,11 @@
     console.log("[Plataformas2D] Configuradas plataformas dinámicas:", this._platformIds);
   };
 
+ 
+
   // Comandos
   PluginManager.registerCommand("Plataformas2D", "activar", () => {
     $gameSystem._plataforma2DActiva = true;
-    // Asegurar inicialización de valores del jugador si ya estamos en mapa
-    if ($gamePlayer) {
-      if ($gamePlayer._realX === undefined) $gamePlayer._realX = $gamePlayer.x;
-      if ($gamePlayer._realY === undefined) $gamePlayer._realY = $gamePlayer.y;
-      if ($gamePlayer._vy === undefined) $gamePlayer._vy = 0;
-      if ($gamePlayer._grounded === undefined) $gamePlayer._grounded = true;
-    }
     console.log("Modo Plataforma 2D activado manualmente");
   });
 
@@ -139,7 +138,7 @@
     console.log("Modo Plataforma 2D desactivado manualmente");
   });
 
-  // Actualizar jugador: sólo ejecuta plataforma si está activo
+  // Actualizar jugador
   const _Game_Player_update = Game_Player.prototype.update;
   Game_Player.prototype.update = function (sceneActive) {
     _Game_Player_update.call(this, sceneActive);
@@ -147,19 +146,8 @@
     if ($gameSystem._plataforma2DActiva) updatePlatform(this);
   };
 
-  // Core del update adaptado a propiedades del jugador (save-safe)
   function updatePlatform(player) {
-    if ($gameMessage.isBusy() || !player.canMove()) return;
-
-    // Inicializar propiedades persistentes del jugador si no existen
-    if (player._realX === undefined) player._realX = player.x;
-    if (player._realY === undefined) player._realY = player.y;
-    if (player._vy === undefined) player._vy = 0;
-    if (player._grounded === undefined) player._grounded = true;
-
-    // Locales para facilitar el cálculo y evitar acceder repetidamente a propiedades
-    let vy = player._vy;
-    let grounded = player._grounded;
+    if ($gameMessage.isBusy() || !$gamePlayer.canMove()) return;
 
     // --- Detección del entorno actual ---
     const env = getRuntimeEnvironment();
@@ -188,12 +176,14 @@
       }
     } else {
       // --- TOUCH (Android / móvil) ---
+      // Usamos COORDENADAS EN PANTALLA del jugador para ser compatibles con zoom
       const playerScreenX = player.screenX();
       const playerScreenY = player.screenY();
 
-      const ABOVE_THRESHOLD = 48;
-      const HORIZ_MARGIN = 40;
-      const FAR_MULT = 1.5;
+      // Umbrales en píxeles para decidir "encima / delante / detrás"
+      const ABOVE_THRESHOLD = 48; // si tocas más arriba que esta distancia → salto vertical
+      const HORIZ_MARGIN = 40;    // margen horizontal para considerar "centro"
+      const FAR_MULT = 1.5;       // multiplicador de velocidad horizontal cuando salta adelantado/atrás
 
       if (TouchInput.isTriggered()) {
         player._touchHoldFrames = 0;
@@ -205,9 +195,11 @@
       if (TouchInput.isPressed()) {
         player._touchHoldFrames = (player._touchHoldFrames || 0) + 1;
 
+        // Si mantiene más de HOLD_THRESHOLD → moverse lateralmente
         if (player._touchHoldFrames >= HOLD_THRESHOLD) {
           const currentX = TouchInput.x;
 
+          // Movimiento relativo a la pantalla del jugador (permite autozoom)
           if (currentX < playerScreenX - 60) {
             dx = -HORIZONTAL_SPEED;
             player.setDirection(4);
@@ -224,35 +216,49 @@
       }
 
       if (TouchInput.isReleased()) {
+        // Si NO fue long press → es TAP (saltar)
         if (!player._touchLongHandled && grounded) {
           const tx = player._touchStartX;
           const ty = player._touchStartY;
 
+          // Distancias en pantalla
           const dxScreen = tx - playerScreenX;
           const dyScreen = ty - playerScreenY;
 
           const absDx = Math.abs(dxScreen);
+          const absDy = Math.abs(dyScreen);
 
+          // 1) SALTO VERTICAL (tap suficientemente por encima del sprite)
           if (dyScreen < -ABOVE_THRESHOLD && absDx <= 80) {
+            // salto vertical puro
             vy = -JUMP;
             grounded = false;
             dx = 0;
             player._touchLastDir = 0;
             AudioManager.playSe({ name: JUMP_SE_NAME, pan: 0, pitch: 100, volume: 90 });
-          } else {
+          }
+          // 2) SALTO HACIA ADELANTE / ATRÁS (según donde se toca comparado con la X del jugador)
+          else {
+            // Determina si el toque está a la derecha o a la izquierda en pantalla respecto al jugador
             const touchIsRight = dxScreen > HORIZ_MARGIN;
             const touchIsLeft  = dxScreen < -HORIZ_MARGIN;
+
+            // Dirección a la que mira el jugador: 4 = izq, 6 = der (si quieres considerar 2/8 puedes extenderlo)
             const facing = player.direction();
 
+            // Si tocas en la dirección donde mira → saltar hacia delante
             let jumpHorizontal = 0;
             if ((facing === 6 && touchIsRight) || (facing === 4 && touchIsLeft)) {
+              // adelante
               jumpHorizontal = (facing === 6 ? 1 : -1) * HORIZONTAL_SPEED * FAR_MULT;
               player.setDirection(facing);
             }
+            // Si tocas en la dirección opuesta → saltar hacia atrás
             else if ((facing === 6 && touchIsLeft) || (facing === 4 && touchIsRight)) {
               jumpHorizontal = (facing === 6 ? -1 : 1) * HORIZONTAL_SPEED * FAR_MULT;
               player.setDirection(facing === 6 ? 4 : 6);
             }
+            // Caso neutro: si no está claramente a izquierda/derecha, usar la X absoluta del touch
             else if (touchIsRight) {
               jumpHorizontal = HORIZONTAL_SPEED * FAR_MULT;
               player.setDirection(6);
@@ -260,9 +266,11 @@
               jumpHorizontal = -HORIZONTAL_SPEED * FAR_MULT;
               player.setDirection(4);
             } else {
+              // toque muy centrado (ni arriba ni lateral claro) → salto vertical
               jumpHorizontal = 0;
             }
 
+            // Aplicar salto si hemos decidido saltar (salto vertical ya aplicado antes)
             if (jumpHorizontal !== 0 || (dyScreen >= -ABOVE_THRESHOLD && absDx <= HORIZ_MARGIN)) {
               vy = -JUMP;
               grounded = false;
@@ -273,18 +281,21 @@
           }
         }
 
+        // reset flags
         player._touchHoldFrames = 0;
         player._touchLongHandled = false;
         player._touchStartX = 0;
         player._touchStartY = 0;
       }
 
+      // Si está en el aire, mantener dirección mientras se mueve
       if (!grounded && player._touchLastDir) {
         dx = player._touchLastDir * HORIZONTAL_SPEED;
         player.setDirection(player._touchLastDir === -1 ? 4 : 6);
       }
     }
 
+    // Ejecutar salto si corresponde (teclas/PC usan shouldJump; touch ya pone vy directo)
     if (shouldJump && grounded) {
       vy = -JUMP;
       grounded = false;
@@ -299,16 +310,41 @@
     newX = Math.max(0, Math.min(newX, $dataMap.width - 1));
     let newY = player._realY + vy;
 
-    // Límites
+    // === LIMITE DURO DEL MAPA ===
     const mapWidth = $dataMap.width;
     const mapHeight = $dataMap.height;
 
-    if (newX < 0) { newX = 0; dx = 0; }
-    if (newX > mapWidth - 1) { newX = mapWidth - 1; dx = 0; }
-    if (newY < 0) { newY = 0; vy = 0; grounded = false; }
-    if (newY > mapHeight - 1) { newY = mapHeight - 1; vy = 0; grounded = true; }
+    if (newX < 0) {
+      newX = 0;
+      dx = 0;
+    }
+    if (newX > mapWidth - 1) {
+      newX = mapWidth - 1;
+      dx = 0;
+    }
 
-    // CAÍDA y SUBIDA (colisiones con tiles)
+    if (newY < 0) {
+      newY = 0;
+      vy = 0;
+      grounded = false;
+    }
+
+    if (newY > mapHeight - 1) {
+      newY = mapHeight - 1;
+      vy = 0;
+      grounded = true;
+    }
+
+    // --- Colisiones simplificadas y robustas (para subida/caída) ---
+    function isTilePassableFromBelow(x, y) {
+      const tx = Math.floor(x);
+      const ty = Math.floor(y);
+      if (ty < 0 || ty >= $dataMap.height) return false;
+      if (tx < 0 || tx >= $dataMap.width) return false;
+      return $gameMap.isPassable(tx, ty, 8);
+    }
+
+    // CAÍDA
     if (vy > 0) {
       const txLeft  = Math.floor(newX - 0.3);
       const txRight = Math.floor(newX + 0.3);
@@ -329,7 +365,9 @@
           grounded = true;
         }
       }
-    } else if (vy < 0) {
+    }
+    // SUBIDA
+    else if (vy < 0) {
       const txLeft  = Math.floor(newX - 0.3);
       const txRight = Math.floor(newX + 0.3);
       const ty = Math.floor(newY);
@@ -343,23 +381,18 @@
       }
     }
 
-    // Aplicar posiciones reales al jugador
+    // Aplicar posiciones reales
     player._realX = newX;
     player._realY = newY;
     player._x = newX;
     player._y = newY;
     player._followers.synchronize(player.x, player.y);
 
-    if (!$gameMap || !$gameSystem._plataforma2DActiva) {
-      // Guardar la física (por si salió antes de activarse)
-      player._vy = vy;
-      player._grounded = grounded;
-      return;
-    }
+    if (!$gameMap || !$gameSystem._plataforma2DActiva) return;
 
     if (!player._jumpEventFlags) player._jumpEventFlags = {};
 
-    // Colisiones con eventos
+    // Colisiones con eventos (mantengo tu lógica principal)
     for (const event of $gameMap.events()) {
       if (!event || !event.eventId || event._erased) continue;
 
@@ -377,6 +410,7 @@
       if (event._playerInside === undefined) event._playerInside = false;
 
       if (touching && !event._playerInside) {
+
         event._playerInside = true;
 
         if (!player._jumpEventFlags[event.eventId()])
@@ -428,7 +462,7 @@
       );
     }
 
-    // Plataformas móviles
+    // Plataformas móviles (mantengo tu implementación)
     if ($gameSystem._platformIds && $gameSystem._platformIds.length > 0) {
       const ids = $gameSystem._platformIds;
       const amplitudes = $gameSystem._platformAmplitudes;
@@ -498,10 +532,6 @@
         plataforma._prevRealX = plataforma._realX;
       }
     }
-
-    // Guardar física de vuelta en el jugador (persistente en runtime)
-    player._vy = vy;
-    player._grounded = grounded;
   }
 
   // Setter seguro para activar/desactivar plataformas 2D
@@ -511,112 +541,60 @@
       if (this._plataforma2DActiva === value) return;
       this._plataforma2DActiva = value;
 
-      const p = $gamePlayer;
       if (!value) {
-        if (p) {
-          delete p._realX;
-          delete p._realY;
-          delete p._prevRealY;
-          delete p._jumpEventFlags;
-          delete p._touchHoldFrames;
-          delete p._touchLongHandled;
-          delete p._touchStartX;
-          delete p._touchLastDir;
-          delete p._vy;
-          delete p._grounded;
+        const p = $gamePlayer;
 
-          p._x = Math.floor(p.x);
-          p._y = Math.floor(p.y);
-          p._followers.synchronize(p.x, p.y);
+        delete p._realX;
+        delete p._realY;
+        delete p._prevRealY;
+        delete p._jumpEventFlags;
+        delete p._touchHoldFrames;
+        delete p._touchLongHandled;
+        delete p._touchStartX;
+        delete p._touchLastDir;
 
-          p._direction = p._direction || 2;
-          p._dashing = false;
-        }
+        p._x = Math.floor(p.x);
+        p._y = Math.floor(p.y);
+        p._followers.synchronize(p.x, p.y);
+
+        p._direction = p._direction || 2;
+        p._dashing = false;
+
         console.log("[Plataformas2D] Modo desactivado: jugador restaurado a movimiento normal.");
-      } else {
-        // Activado: asegurar inicialización mínima
-        if (p) {
-          if (p._realX === undefined) p._realX = p.x;
-          if (p._realY === undefined) p._realY = p.y;
-          if (p._vy === undefined) p._vy = 0;
-          if (p._grounded === undefined) p._grounded = true;
-        }
       }
     }
   });
+const _Game_Player_performTransfer = Game_Player.prototype.performTransfer;
+Game_Player.prototype.performTransfer = function() {
+  _Game_Player_performTransfer.call(this);
 
-  // Hook: performTransfer (por compatibilidad - algunos entornos llaman esto)
-  const _Game_Player_performTransfer = Game_Player.prototype.performTransfer;
-  Game_Player.prototype.performTransfer = function() {
-    _Game_Player_performTransfer.call(this);
+  if ($gameSystem._plataforma2DActiva) {
+    this._realX = this.x;
+    this._realY = this.y;
+    vy = 0;
+    grounded = true;
+  }
+};
+// ============================================
+// FIX UNIVERSAL: Reiniciar estado al cargar partida
+// ============================================
+const _Scene_Load_onLoadSuccess = Scene_Load.prototype.onLoadSuccess;
+Scene_Load.prototype.onLoadSuccess = function() {
+  _Scene_Load_onLoadSuccess.call(this);
 
-    if ($gameSystem._plataforma2DActiva) {
-      if (this._realX === undefined) this._realX = this.x;
-      if (this._realY === undefined) this._realY = this.y;
-      this._vy = 0;
-      this._grounded = true;
-    }
-  };
+  if ($gameSystem._plataforma2DActiva) {
+    const p = $gamePlayer;
 
-  // Hook robusto: DataManager.extractSaveContents -> se ejecuta al cargar saves
-  const _DataManager_extractSaveContents = DataManager.extractSaveContents;
-  DataManager.extractSaveContents = function(contents) {
-    _DataManager_extractSaveContents.call(this, contents);
+    p._realX = p.x;
+    p._realY = p.y;
+    p._prevRealY = p._realY;
 
-    // Reiniciar física y flags inmediatamente tras extraer save contents
-    try {
-      // Si $gamePlayer ya existe (normalmente sí), reiniciamos sus props
-      if ($gamePlayer) {
-        $gamePlayer._realX = $gamePlayer.x;
-        $gamePlayer._realY = $gamePlayer.y;
-        $gamePlayer._prevRealY = $gamePlayer._realY;
-        $gamePlayer._vy = 0;
-        $gamePlayer._grounded = true;
+    vy = 0;
+    grounded = true;
 
-        delete $gamePlayer._jumpEventFlags;
-        delete $gamePlayer._touchHoldFrames;
-        delete $gamePlayer._touchLongHandled;
-        delete $gamePlayer._touchStartX;
-        delete $gamePlayer._touchLastDir;
-      }
-
-      // Reset plataformas runtime (por si quedaron en estado raro)
-      if ($gameMap && $gameSystem._platformIds) {
-        for (const id of $gameSystem._platformIds) {
-          const ev = $gameMap.event(id);
-          if (ev) {
-            delete ev._baseX;
-            delete ev._baseY;
-            delete ev._directionUp;
-            delete ev._prevRealX;
-            delete ev._prevRealY;
-          }
-        }
-      }
-    } catch (e) {
-      // Log leve, no romper el flujo de carga
-      console.log("[Plataformas2D] Error reiniciando estado tras extractSaveContents:", e);
-    }
-  };
-
-  // Hook adicional: Scene_Load.onLoadSuccess (por seguridad en WebView)
-  const _Scene_Load_onLoadSuccess = Scene_Load.prototype.onLoadSuccess;
-  Scene_Load.prototype.onLoadSuccess = function() {
-    _Scene_Load_onLoadSuccess.call(this);
-
-    try {
-      if ($gameSystem._plataforma2DActiva && $gamePlayer) {
-        $gamePlayer._realX = $gamePlayer.x;
-        $gamePlayer._realY = $gamePlayer.y;
-        $gamePlayer._prevRealY = $gamePlayer._realY;
-        $gamePlayer._vy = 0;
-        $gamePlayer._grounded = true;
-        console.log("[Plataformas2D] Estado reiniciado tras Scene_Load.onLoadSuccess.");
-      }
-    } catch (e) {
-      console.log("[Plataformas2D] Error en onLoadSuccess:", e);
-    }
-  };
+    console.log("[Plataformas2D] Estado reiniciado tras cargar partida.");
+  }
+};
 
   // Tecla espacio → saltar
   Input.keyMapper[32] = "jump";
