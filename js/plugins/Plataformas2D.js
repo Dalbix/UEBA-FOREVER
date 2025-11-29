@@ -128,34 +128,10 @@ Game_System.prototype.initialize = function() {
  
 
   // Comandos
-PluginManager.registerCommand("Plataformas2D", "activar", () => {
+  PluginManager.registerCommand("Plataformas2D", "activar", () => {
     $gameSystem._plataforma2DActiva = true;
     console.log("Modo Plataforma 2D activado manualmente");
-
-    // Comprobación de colisión inmediata en Android
-    const env = getRuntimeEnvironment();
-    const isAndroid = env.isAndroidApp || env.isAndroidWeb;
-    if (isAndroid) {
-        const player = $gamePlayer;
-        const tx = Math.floor(player.x);
-        const ty = Math.floor(player.y);
-
-        // Bloqueo superior
-        if (!$gameMap.isPassable(tx, ty, 2) && $gameMap.isPassable(tx, ty, 8)) {
-            // techo bloquea arriba, dejar al jugador debajo
-            player._realY = ty + 1;
-            vy = 0;
-            grounded = false;
-        }
-        // Bloqueo inferior
-        else if (!$gameMap.isPassable(tx, ty, 8)) {
-            // suelo bloquea abajo, dejar al jugador encima
-            player._realY = ty - 1;
-            vy = 0;
-            grounded = true;
-        }
-    }
-});
+  });
 
   PluginManager.registerCommand("Plataformas2D", "desactivar", () => {
     $gameSystem._plataforma2DActiva = false;
@@ -368,42 +344,46 @@ PluginManager.registerCommand("Plataformas2D", "activar", () => {
       return $gameMap.isPassable(tx, ty, 8);
     }
 
-    // CAÍDA
-    if (vy > 0) {
-      const txLeft  = Math.floor(newX - 0.3);
-      const txRight = Math.floor(newX + 0.3);
-      const ty = Math.floor(newY);
+const zoom = $gameSystem._disableAutoZoom ? 1.0 : ($gameScreen._zoomScale || 1.0);
 
-      const canEnterUpLeft  = $gameMap.isPassable(txLeft, ty, 8);
-      const canEnterUpRight = $gameMap.isPassable(txRight, ty, 8);
+// CAÍDA
+if (vy > 0) {
+  const txLeft  = Math.floor((newX - 0.3) / zoom);
+  const txRight = Math.floor((newX + 0.3) / zoom);
+  const ty      = Math.floor(newY / zoom);
 
-      if (!canEnterUpLeft || !canEnterUpRight) {
-        newY = ty - 0.001;
-        vy = 0;
-        grounded = true;
-      } else {
-        const bottom = ty + 1;
-        if (newY > bottom - 0.001) {
-          newY = bottom - 0.001;
-          vy = 0;
-          grounded = true;
-        }
-      }
+  const canEnterUpLeft  = $gameMap.isPassable(txLeft, ty, 8);
+  const canEnterUpRight = $gameMap.isPassable(txRight, ty, 8);
+
+  if (!canEnterUpLeft || !canEnterUpRight) {
+    newY = ty - 0.001;
+    vy = 0;
+    grounded = true;
+  } else {
+    const bottom = ty + 1;
+    if (newY > bottom - 0.001) {
+      newY = bottom - 0.001;
+      vy = 0;
+      grounded = true;
     }
-    // SUBIDA
-    else if (vy < 0) {
-      const txLeft  = Math.floor(newX - 0.3);
-      const txRight = Math.floor(newX + 0.3);
-      const ty = Math.floor(newY);
+  }
+}
 
-      const canExitDownLeft  = $gameMap.isPassable(txLeft, ty, 2);
-      const canExitDownRight = $gameMap.isPassable(txRight, ty, 2);
+// SUBIDA
+else if (vy < 0) {
+  const txLeft  = Math.floor((newX - 0.3) / zoom);
+  const txRight = Math.floor((newX + 0.3) / zoom);
+  const ty      = Math.floor(newY / zoom);
 
-      if (!canExitDownLeft || !canExitDownRight) {
-        newY = ty + 1 + 0.001;
-        vy = 0;
-      }
-    }
+  const canExitDownLeft  = $gameMap.isPassable(txLeft, ty, 2);
+  const canExitDownRight = $gameMap.isPassable(txRight, ty, 2);
+
+  if (!canExitDownLeft || !canExitDownRight) {
+    newY = ty + 1 + 0.001;
+    vy = 0;
+  }
+}
+
 
     // Aplicar posiciones reales
     player._realX = newX;
