@@ -128,10 +128,34 @@ Game_System.prototype.initialize = function() {
  
 
   // Comandos
-  PluginManager.registerCommand("Plataformas2D", "activar", () => {
+PluginManager.registerCommand("Plataformas2D", "activar", () => {
     $gameSystem._plataforma2DActiva = true;
     console.log("Modo Plataforma 2D activado manualmente");
-  });
+
+    // Comprobación de colisión inmediata en Android
+    const env = getRuntimeEnvironment();
+    const isAndroid = env.isAndroidApp || env.isAndroidWeb;
+    if (isAndroid) {
+        const player = $gamePlayer;
+        const tx = Math.floor(player.x);
+        const ty = Math.floor(player.y);
+
+        // Bloqueo superior
+        if (!$gameMap.isPassable(tx, ty, 2) && $gameMap.isPassable(tx, ty, 8)) {
+            // techo bloquea arriba, dejar al jugador debajo
+            player._realY = ty + 1;
+            vy = 0;
+            grounded = false;
+        }
+        // Bloqueo inferior
+        else if (!$gameMap.isPassable(tx, ty, 8)) {
+            // suelo bloquea abajo, dejar al jugador encima
+            player._realY = ty - 1;
+            vy = 0;
+            grounded = true;
+        }
+    }
+});
 
   PluginManager.registerCommand("Plataformas2D", "desactivar", () => {
     $gameSystem._plataforma2DActiva = false;
