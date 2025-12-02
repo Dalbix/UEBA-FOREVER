@@ -42,6 +42,28 @@
  * - desactivar
  *   Desactiva el modo Plataforma 2D y devuelve el control normal.
  *
+ * - setJumpSE
+ *   Cambia el SE usado al saltar.
+ *   Parámetros:
+ *     - name: Nombre del archivo en Audio/SE
+ *
+ * @command activar
+ * @text Activar Plataforma 2D
+ * @desc Activa el modo de plataformas 2D en el mapa actual.
+ *
+ * @command desactivar
+ * @text Desactivar Plataforma 2D
+ * @desc Desactiva el modo plataformas 2D y vuelve al movimiento normal.
+ *
+ * @command setJumpSE
+ * @text Cambiar SE de salto
+ * @desc Cambia el sonido de salto cuando el modo plataforma está activo.
+ *
+ * @arg name
+ * @text Nuevo SE
+ * @desc Nombre del archivo SE dentro de Audio/SE
+ * @type file
+ * @dir audio/se
  */
 
 (() => {
@@ -51,7 +73,7 @@
   const DESPLAZAMIENTO = Number(params["desplazamiento"] || 3);
   const ALTURA = Number(params["jumpHeight"] || 3);
   const TIEMPO = parseFloat(params["jumpTime"]) || 1.5;
-  const JUMP_SE_NAME = String(params["jumpSE"] || "Jump1");
+  let JUMP_SE_NAME = String(params["jumpSE"] || "Jump1");
 
   const FPS = 60;
   const FRAMES_TOTAL = TIEMPO * FPS;
@@ -137,6 +159,17 @@ Game_System.prototype.initialize = function() {
     $gameSystem._plataforma2DActiva = false;
     console.log("Modo Plataforma 2D desactivado manualmente");
   });
+  // cambiar sonido del salto
+PluginManager.registerCommand("Plataformas2D", "setJumpSE", args => {
+  const newName = args.name || "";
+  if (newName.trim() !== "") {
+    JUMP_SE_NAME = newName;
+    //console.log("[Plataformas2D] Sonido de salto cambiado a:", newName);
+  } else {
+    console.warn("[Plataformas2D] (setJumpSE) Nombre vacío, ignorado.");
+  }
+});
+
 
   // Actualizar jugador
   const _Game_Player_update = Game_Player.prototype.update;
