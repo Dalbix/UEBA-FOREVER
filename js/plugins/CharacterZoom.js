@@ -1,6 +1,6 @@
 /*:
  * @target MZ
- * @plugindesc Aplica zoom visual independiente al jugador o eventos (versión corregida)
+ * @plugindesc Aplica zoom visual independiente al jugador y eventos. Soporte actorId manteniendo compatibilidad plena con llamadas antiguas. 
  * @author 3DalbiX
  *
  * @command set
@@ -14,6 +14,7 @@
  * @default player
  *
  * @arg eventId
+ * @text actorId / eventId
  * @type number
  * @default 1
  *
@@ -37,6 +38,7 @@
  * @default player
  *
  * @arg eventId
+ * @text actorId / eventId
  * @type number
  * @default 1
  */
@@ -44,7 +46,7 @@
 (() => {
 
   // ---------------------------------------------------------
-  // A: Funciones de utilidad para asegurar zoom limpio
+  // A: Utilidades
   // ---------------------------------------------------------
 
   function hardResetZoom(ch) {
@@ -54,23 +56,40 @@
     ch._zoomDuration = 0;
   }
 
-// ---------------------------------------------------------
-// Reset SOLO cuando se cambia de mapa
-// ---------------------------------------------------------
+  function findCharacterByActorId(actorId) {
+    const leader = $gameParty.leader();
+    if (!leader) return null;
 
-const _Game_Player_performTransfer = Game_Player.prototype.performTransfer;
-Game_Player.prototype.performTransfer = function() {
-  _Game_Player_performTransfer.call(this);
+    if (leader.actorId() === actorId) {
+      return $gamePlayer;
+    }
 
-  // Reset seguro SOLO al cambiar de mapa
-  hardResetZoom($gamePlayer);
-  for (const ev of $gameMap.events()) {
-    hardResetZoom(ev);
+    const followers = $gamePlayer.followers()._data;
+    for (const f of followers) {
+      if (f.actor && f.actor() && f.actor().actorId() === actorId) {
+        return f;
+      }
+    }
+
+    return null;
   }
-};
 
   // ---------------------------------------------------------
-  // C: Sprite_Character (aplicación del zoom)
+  // Reset en cambio de mapa
+  // ---------------------------------------------------------
+
+  const _Game_Player_performTransfer = Game_Player.prototype.performTransfer;
+  Game_Player.prototype.performTransfer = function() {
+    _Game_Player_performTransfer.call(this);
+
+    hardResetZoom($gamePlayer);
+    for (const ev of $gameMap.events()) {
+      hardResetZoom(ev);
+    }
+  };
+
+  // ---------------------------------------------------------
+  // Aplicación visual del zoom
   // ---------------------------------------------------------
 
   const _Sprite_Character_update = Sprite_Character.prototype.update;
@@ -79,15 +98,13 @@ Game_Player.prototype.performTransfer = function() {
     const ch = this._character;
 
     if (ch) {
-      // Valor seguro
       if (ch._zoomScale == null) ch._zoomScale = 1.0;
-
       this.scale.set(ch._zoomScale, ch._zoomScale);
     }
   };
 
   // ---------------------------------------------------------
-  // D: Lógica de interpolación
+  // Interpolación al actualizar personaje
   // ---------------------------------------------------------
 
   const _Game_CharacterBase_update = Game_CharacterBase.prototype.update;
@@ -109,7 +126,7 @@ Game_Player.prototype.performTransfer = function() {
   };
 
   // ---------------------------------------------------------
-  // E: Métodos públicos de zoom por personaje
+  // Métodos públicos
   // ---------------------------------------------------------
 
   Game_CharacterBase.prototype.setCharacterZoom = function(scale, duration = 0) {
@@ -129,18 +146,21 @@ Game_Player.prototype.performTransfer = function() {
   };
 
   // ---------------------------------------------------------
-  // F: Comandos del plugin
+  // Comandos del plugin
   // ---------------------------------------------------------
 
   PluginManager.registerCommand("CharacterZoom", "set", args => {
     const target = args.target;
     const scale = Number(args.scale);
     const duration = Number(args.duration);
+    const id = Number(args.eventId);
 
+    // Player ahora admite actorId manteniendo compatibilidad
     if (target === "player") {
-      $gamePlayer.setCharacterZoom(scale, duration);
+      const ch = findCharacterByActorId(id) ?? $gamePlayer;
+      ch.setCharacterZoom(scale, duration);
+
     } else {
-      const id = Number(args.eventId);
       const ev = $gameMap.event(id);
       if (ev) ev.setCharacterZoom(scale, duration);
     }
@@ -148,33 +168,51 @@ Game_Player.prototype.performTransfer = function() {
 
   PluginManager.registerCommand("CharacterZoom", "reset", args => {
     const target = args.target;
+    const id = Number(args.eventId);
 
     if (target === "player") {
-      $gamePlayer.setCharacterZoom(1.0, 0);
+      const ch = findCharacterByActorId(id) ?? $gamePlayer;
+      ch.setCharacterZoom(1.0, 0);
+
     } else {
-      const id = Number(args.eventId);
       const ev = $gameMap.event(id);
       if (ev) ev.setCharacterZoom(1.0, 0);
     }
   });
 
   // ---------------------------------------------------------
-  // G: Acceso global (opcional)
+  // API GLOBAL (100% COMPATIBLE CON VERSIONES ANTERIORES)
   // ---------------------------------------------------------
 
   window.CharacterZoom = {
+
+    // === API antigua: NO SE MODIFICA NADA ===
     setPlayer: (scale, duration = 0) => {
-      $gamePlayer?.setCharacterZoom(scale, duration);
+      $gamePlayer?.setCharacterZoom(Number(scale), Number(duration));
     },
+
     resetPlayer: (duration = 0) => {
-      $gamePlayer?.setCharacterZoom(1.0, duration);
+      $gamePlayer?.setCharacterZoom(1.0, Number(duration));
     },
+
     setEvent: (id, scale, duration = 0) => {
-      $gameMap.event(id)?.setCharacterZoom(scale, duration);
+      $gameMap.event(Number(id))?.setCharacterZoom(Number(scale), Number(duration));
     },
+
     resetEvent: (id, duration = 0) => {
-      $gameMap.event(id)?.setCharacterZoom(1.0, duration);
+      $gameMap.event(Number(id))?.setCharacterZoom(1.0, Number(duration));
     },
+
+    // === API interna del nuevo actorId, sin romper nada ===
+    setActor: (actorId, scale, duration = 0) => {
+      const ch = findCharacterByActorId(Number(actorId));
+      ch?.setCharacterZoom(Number(scale), Number(duration));
+    },
+
+    resetActor: (actorId, duration = 0) => {
+      const ch = findCharacterByActorId(Number(actorId));
+      ch?.setCharacterZoom(1.0, Number(duration));
+    }
   };
 
 })();

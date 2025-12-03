@@ -569,6 +569,19 @@ else if (vy < 0) {
         plataforma._prevRealX = plataforma._realX;
       }
     }
+	// === FIX DE ANIMACIÓN LATERAL ===
+if ($gameSystem._plataforma2DActiva) {
+    if (dx !== 0 && grounded) {
+        // Marca que el jugador está "moviendo los pies"
+        player._stopCount = 0;
+        player._stepAnime = true;
+        player.updateAnimation();
+    } else {
+        // Si está quieto, detener animación
+        player._stepAnime = false;
+    }
+}
+
   }
 
   // Setter seguro para activar/desactivar plataformas 2D
