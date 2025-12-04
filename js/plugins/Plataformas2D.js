@@ -569,7 +569,7 @@ else if (vy < 0) {
         plataforma._prevRealX = plataforma._realX;
       }
     }
-	// === FIX DE ANIMACIÓN LATERAL ===
+/*	// === FIX DE ANIMACIÓN LATERAL ===
 if ($gameSystem._plataforma2DActiva) {
     if (dx !== 0 && grounded) {
         // Marca que el jugador está "moviendo los pies"
@@ -580,7 +580,29 @@ if ($gameSystem._plataforma2DActiva) {
         // Si está quieto, detener animación
         player._stepAnime = false;
     }
-}
+}*/
+    // === FIX DE ANIMACIÓN LATERAL (SEGURO) ===
+    if ($gameSystem._plataforma2DActiva && !SceneManager.isSceneChanging()) {
+
+        // Asegurar que el actor no está transferido o bloqueado
+        if (!$gamePlayer.isTransferring() && $gamePlayer.canMove()) {
+
+            if (dx !== 0 && grounded) {
+                player._stopCount = 0;
+                player._stepAnime = true;
+                player.updateAnimation();
+            } else {
+                player._stepAnime = false;
+            }
+
+        } else {
+            // Si está transfiriéndose o bloqueado, siempre desactivar
+            player._stepAnime = false;
+        }
+    } else {
+        // Si se desactiva plataformas2D, animación normal OFF
+        player._stepAnime = false;
+    }
 
   }
 
