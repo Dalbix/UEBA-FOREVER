@@ -185,6 +185,7 @@
 
                 for (const ev of $gameMap.events()) {
                     if (!ev || ev._erased) continue;
+					if (ev.isThrough()) continue; //ignora eventos con through activado en las colisiones del disparo
                     const evSprite = spriteset._characterSprites.find(s => s._character === ev);
                     if (!evSprite) continue;
 
