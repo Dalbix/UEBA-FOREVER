@@ -50,5 +50,10 @@
     _Scene_Map_processMapTouch.call(this);
   };
 
+const _Scene_Map_isMenuEnabled = Scene_Map.prototype.isMenuEnabled;
+Scene_Map.prototype.isMenuEnabled = function () {
+    if (_jugadorCongelado) return false;
+    return _Scene_Map_isMenuEnabled.call(this);
+};
 })();
 
