@@ -67,6 +67,29 @@
     const SCALE = Number(params["projectileScale"] || 1.0);
     const Y_OFFSET = Number(params["projectileYOffset"] || 0);
 
+// -----------------------------
+// Modo colisión tiles opcional
+// -----------------------------
+Game_System.prototype.enableProjectileTileCollision = function(enabled) {
+    this._projectileCollideTiles = !!enabled;
+};
+
+Game_System.prototype.isProjectileTileCollisionEnabled = function() {
+    return !!this._projectileCollideTiles;
+};
+Game_System.prototype.setProjectileRange2D = function(range) {
+    if (typeof range === "number" && range >= 0) {
+        this._projectileRange2D = range;
+    }
+};
+
+Game_System.prototype.getProjectileRange2D = function() {
+    return (this._projectileRange2D !== undefined)
+        ? this._projectileRange2D
+        : RANGE; // valor por defecto del plugin
+};
+
+
     Input.keyMapper[65] = "shoot";
 	
 
@@ -125,6 +148,7 @@
 
             this._customImpact = undefined;
             this._ownerEventId = null;
+			this._customRange = undefined; 
         }
 
         playImpactAnimation() {
@@ -146,6 +170,7 @@
         }
 
         checkCollisionWithPlayer() {
+			if (this._ownerEventId == null) return false;
             const scene = SceneManager._scene;
             if (!scene?._spriteset || !this._sprite) return false;
 
@@ -174,37 +199,52 @@
             return false;
         }
 
-        checkEventCollisionUsingGlobalBounds() {
-            const scene = SceneManager._scene;
-            const spriteset = scene?._spriteset;
-            if (!spriteset || !this._sprite) return false;
 
-            try {
-                const pGlobal = this._sprite.getGlobalPosition();
-                const margin = 6;
+checkEventCollisionUsingGlobalBounds() {
+    const scene = SceneManager._scene;
+    const spriteset = scene?._spriteset;
+    if (!spriteset || !this._sprite) return false;
 
-                for (const ev of $gameMap.events()) {
-                    if (!ev || ev._erased) continue;
-					if (ev.isThrough()) continue; //ignora eventos con through activado en las colisiones del disparo
-                    const evSprite = spriteset._characterSprites.find(s => s._character === ev);
-                    if (!evSprite) continue;
+    try {
+        const pGlobal = this._sprite.getGlobalPosition();
+        const margin = 6;
 
-                    const evBounds = evSprite.getBounds();
-                    const left = evBounds.x + margin;
-                    const right = evBounds.x + evBounds.width - margin;
-                    const top = evBounds.y + margin;
-                    const bottom = evBounds.y + evBounds.height - margin;
+        for (const ev of $gameMap.events()) {
+            if (!ev || ev._erased) continue;
 
-                    if (pGlobal.x >= left && pGlobal.x <= right && pGlobal.y >= top && pGlobal.y <= bottom) {
-                        const key = [$gameMap.mapId(), ev.eventId(), "C"];
-                        $gameSelfSwitches.setValue(key, true);
-                        return true;
-                    }
-                }
-            } catch(e) {}
+            // 1️⃣ Ignorar eventos con through
+            if (ev.isThrough()) continue;
 
-            return false;
+            // 2️⃣ 🔑 Ignorar eventos que atraviesan al jugador
+            if (
+                $gameSystem.isProjectileTileCollisionEnabled?.() &&
+                window.EventNoPlayerCollisionDynamic?.eventIdSet?.has(ev.eventId())
+            ) {
+                continue;
+            }
+
+            const evSprite = spriteset._characterSprites.find(s => s._character === ev);
+            if (!evSprite) continue;
+
+            const evBounds = evSprite.getBounds();
+            const left   = evBounds.x + margin;
+            const right  = evBounds.x + evBounds.width - margin;
+            const top    = evBounds.y + margin;
+            const bottom = evBounds.y + evBounds.height - margin;
+
+            if (
+                pGlobal.x >= left && pGlobal.x <= right &&
+                pGlobal.y >= top  && pGlobal.y <= bottom
+            ) {
+                const key = [$gameMap.mapId(), ev.eventId(), "C"];
+                $gameSelfSwitches.setValue(key, true);
+                return true;
+            }
         }
+    } catch (e) {}
+
+    return false;
+}
 
         createSprite() {
             if (this._sprite) return;
@@ -246,7 +286,7 @@
             }
         }
 
-        update() {
+    update() {
     if (!this._alive) return;
 
     const scene = SceneManager._scene;
@@ -269,20 +309,82 @@
     }
     this._distance += Math.abs(step);
 
-    // Actualizar posición del sprite
+
+const maxRange = $gameSystem.getProjectileRange2D
+        ? $gameSystem.getProjectileRange2D()
+        : RANGE;
+	
+    if (this.checkEventCollisionUsingGlobalBounds()){ 
+	//console.log("Global");
+	return this.destroy();
+	}
+    if (this.checkCollisionWithPlayer()){
+		//console.log("Col Player");
+		return this.destroy();
+    }
+	
+const range = (typeof this._customRange === "number" && this._customRange >= 0 && this._customRange < maxRange) 
+    ? this._customRange 
+    : maxRange;
+
+if (this._distance >= range) {
+    //console.log("RANGE:"+this._customRange+";"+maxRange+";"+range);
+    return this.destroy();
+}
+
+		// Actualizar posición del sprite
     this._sprite.x = this.x * $gameMap.tileWidth();
     this._sprite.y = this.y * $gameMap.tileHeight();
-
-    if (this.checkEventCollisionUsingGlobalBounds()) return this.destroy();
-    if (this.checkCollisionWithPlayer()) return this.destroy();
-
-    if (this._distance >= RANGE) return this.destroy();
         }
+
     }
 
     // --------------------------------------------------------
     // PLAYER
     // --------------------------------------------------------
+	
+Game_Player.prototype.getProjectileRangeUntilBlock = function(dir, maxRange) {
+    
+	if (!$gameSystem.isProjectileTileCollisionEnabled?.()) {
+        return maxRange;
+    }
+	
+	const startX = Math.floor(this._realX);
+    const startY = Math.floor(this._realY);
+
+    let x = startX;
+    let y = startY;
+
+    let freeTiles = 0;
+
+    for (let i = 0; i < maxRange; i++) {
+        switch (dir) {
+            case 2: y += 1; break;
+            case 4: x -= 1; break;
+            case 6: x += 1; break;
+            case 8: y -= 1; break;
+        }
+
+        // Fuera del mapa → bloquea
+        if (!$gameMap.isValid(x, y)) {
+            break;
+        }
+
+        // Tile bloqueante → parar
+        if (!$gameMap.checkPassage(x, y, dir)) {
+			//console.log("jugador en :"+startX+";"+startY+", encontrado tile no pasable en :"+x+";"+y+" direccion:"+dir);
+            break;
+        }
+
+        freeTiles++;
+    }
+
+    return freeTiles;
+	
+};
+
+
+
     const _Game_Player_update = Game_Player.prototype.update;
     Game_Player.prototype.update = function(sceneActive) {
         _Game_Player_update.call(this, sceneActive);
@@ -320,6 +422,18 @@ Game_Player.prototype.shootProjectile = function() {
     AudioManager.playSe({ name: seUsed, pan: 0, pitch: 100, volume: 90 });
 
     let dir = this.direction();
+	
+	
+const maxRange = $gameSystem.getProjectileRange2D
+    ? $gameSystem.getProjectileRange2D()
+    : RANGE;
+
+// 🔥 calcular range real hasta bloqueo
+const rangeUntilBlock =
+    $gameSystem.isProjectileTileCollisionEnabled?.()
+        ? this.getProjectileRangeUntilBlock(dir, maxRange)
+        : maxRange;
+
 
     // Detectar si Plataforma2D está activa
     const platformerActive = $gameSystem.isPlatformer2DActive && $gameSystem.isPlatformer2DActive();
@@ -353,6 +467,10 @@ Game_Player.prototype.shootProjectile = function() {
     p._customGraphic = $gameSystem._projectileGraphic_Player;
     p._customScale   = $gameSystem._projectileScale_Player;
     p._customImpact  = $gameSystem._projectileImpact_Player;
+	
+	//console.log("Dir:", dir, "startX_px:", startX_px, "tileX:", Math.floor(startX_px / $gameMap.tileWidth()));
+
+	p._customRange = rangeUntilBlock;
 
     if (!this._projectiles2D) this._projectiles2D = [];
     this._projectiles2D.push(p);
@@ -413,5 +531,7 @@ Game_Player.prototype.shootProjectile = function() {
                 $gameTemp._globalProjectiles2D.filter(p => p._alive);
         }
     };
+
+
 
 })();
