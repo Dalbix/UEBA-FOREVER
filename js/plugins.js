@@ -24,5 +24,6 @@ var $plugins =
 {"name":"CharacterZoom","status":true,"description":"Permite aplicar zoom visual a personajes o eventos sin alterar el zoom global del mapa. Compatible con AutoZoomTouchImages.","parameters":{}},
 {"name":"Disparo2D","status":true,"description":"Disparo 2D robusto: colisión usando bounds globales de sprites (compatible con zoom) + control por script","parameters":{"shootSpeed":"0.25","shootRange":"15","shootSE":"Attack2","projectileGraphic":"attack","projectileScale":"0.10","projectileYOffset":"0"}},
 {"name":"MoverEventoAPunto","status":true,"description":"Movimiento continuo hacia un punto con A* simple y SelfSwitch opcional al llegar.","parameters":{}},
-{"name":"EventNoPlayerCollisionDynamic","status":true,"description":"Eventos concretos pueden atravesar al jugador sin perder colisiones normales. IDs añadidos dinámicamente.","parameters":{}}
+{"name":"EventNoPlayerCollisionDynamic","status":true,"description":"Eventos concretos pueden atravesar al jugador sin perder colisiones normales. IDs añadidos dinámicamente.","parameters":{}},
+{"name":"DualHudBars","status":true,"description":"HUD con dos barras superiores configurables por comando (izquierda y derecha)","parameters":{}}
 ];

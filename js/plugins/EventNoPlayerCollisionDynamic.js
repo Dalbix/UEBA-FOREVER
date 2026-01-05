@@ -49,15 +49,29 @@
     () => enabled = false
   );
 
-  PluginManager.registerCommand(
+ /* PluginManager.registerCommand(
     "EventNoPlayerCollisionDynamic",
     "AddEvento",
     args => {
       const id = Number(args.id);
       if (!isNaN(id)) eventIdSet.add(id);
     }
-  );
+  );*/
+PluginManager.registerCommand(
+  "EventNoPlayerCollisionDynamic",
+  "AddEvento",
+  args => {
+    const ids = String(args.id)
+      .replace(/[\[\]]/g, "")
+      .split(",")
+      .map(n => Number(n.trim()))
+      .filter(n => !isNaN(n));
 
+    for (const id of ids) {
+      eventIdSet.add(id);
+    }
+  }
+);
   PluginManager.registerCommand(
     "EventNoPlayerCollisionDynamic",
     "RemoveEvento",
