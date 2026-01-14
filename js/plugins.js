@@ -25,5 +25,8 @@ var $plugins =
 {"name":"Disparo2D","status":true,"description":"Disparo 2D robusto: colisión usando bounds globales de sprites (compatible con zoom) + control por script","parameters":{"shootSpeed":"0.25","shootRange":"15","shootSE":"Attack2","projectileGraphic":"attack","projectileScale":"0.10","projectileYOffset":"0"}},
 {"name":"MoverEventoAPunto","status":true,"description":"Movimiento continuo hacia un punto con A* simple y SelfSwitch opcional al llegar.","parameters":{}},
 {"name":"EventNoPlayerCollisionDynamic","status":true,"description":"Eventos concretos pueden atravesar al jugador sin perder colisiones normales. IDs añadidos dinámicamente.","parameters":{}},
-{"name":"DualHudBars","status":true,"description":"HUD con dos barras superiores configurables por comando (izquierda y derecha)","parameters":{}}
+{"name":"DualHudBars","status":true,"description":"HUD con dos barras superiores configurables por comando (izquierda y derecha)","parameters":{}},
+{"name":"ResetVariableOnLoad","status":true,"description":"Resetea una variable seleccionable a 0 cada vez que se carga una partida.","parameters":{"sessionVariable":"49"}},
+{"name":"LightningStorm","status":true,"description":"Rayo de tormenta ramificado realista que cae desde la parte superior de la pantalla hasta un evento.","parameters":{}},
+{"name":"ElectricExplosion","status":true,"description":"Efecto de explosión eléctrica para eventos","parameters":{}}
 ];
