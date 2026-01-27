@@ -324,5 +324,20 @@ DualHudBars.refresh = function() {
     if (this._left)  this._left._forceRefresh  = true;
     if (this._right) this._right._forceRefresh = true;
 };
+// =====================================================
+// RESET HUD AL CARGAR PARTIDA O NUEVO JUEGO
+// =====================================================
+const _DualHudBars_extractSaveContents = DataManager.extractSaveContents;
+DataManager.extractSaveContents = function(contents) {
+    _DualHudBars_extractSaveContents.call(this, contents);
 
+    // ocultar barras al cargar
+    HUD.left.visible = false;
+    HUD.right.visible = false;
+
+    // refrescar sprites si existen
+    if (window.DualHudBars) {
+        DualHudBars.refresh();
+    }
+};
 })();
