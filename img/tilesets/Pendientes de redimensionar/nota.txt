@@ -1,0 +1,5 @@
+normalmente hay un maximo de 16 objetos por fila y un maximo de 16 objetos por columna.
+Cada objeto debe ocuptar 48x48 pixeles.
+
+Pero por ejemplo con las bolas de billar no me interesaba respetar eso para que no salieran unas bolas gigantes, asi que
+o cogia cada objeto varias bolas o las separaba a mano...
