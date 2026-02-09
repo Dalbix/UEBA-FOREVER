@@ -379,43 +379,44 @@ PluginManager.registerCommand("Plataformas2D", "setJumpSE", args => {
 
 const zoom = $gameSystem._disableAutoZoom ? 1.0 : ($gameScreen._zoomScale || 1.0);
 
-// CAÍDA
+// === COLISIÓN EN CAÍDA (SIN ZOOM) ===
+// _realX / _realY ya están en tiles del mapa
 if (vy > 0) {
-  const txLeft  = Math.floor((newX - 0.3) / zoom);
-  const txRight = Math.floor((newX + 0.3) / zoom);
-  const ty      = Math.floor(newY / zoom);
+  const txLeft  = Math.floor(newX - 0.3);
+  const txRight = Math.floor(newX + 0.3);
+  const ty      = Math.floor(newY);
 
   const canEnterUpLeft  = $gameMap.isPassable(txLeft, ty, 8);
   const canEnterUpRight = $gameMap.isPassable(txRight, ty, 8);
 
   if (!canEnterUpLeft || !canEnterUpRight) {
+    // 🔍 DEBUG
+    console.log("[COLISION CAIDA] Bloque detectado en", txLeft, txRight, ty);
+
     newY = ty - 0.001;
     vy = 0;
     grounded = true;
-  } else {
-    const bottom = ty + 1;
-    if (newY > bottom - 0.001) {
-      newY = bottom - 0.001;
-      vy = 0;
-      grounded = true;
-    }
   }
 }
 
-// SUBIDA
+
+// === COLISIÓN EN SUBIDA (SIN ZOOM) ===
 else if (vy < 0) {
-  const txLeft  = Math.floor((newX - 0.3) / zoom);
-  const txRight = Math.floor((newX + 0.3) / zoom);
-  const ty      = Math.floor(newY / zoom);
+  const txLeft  = Math.floor(newX - 0.3);
+  const txRight = Math.floor(newX + 0.3);
+  const ty      = Math.floor(newY);
 
   const canExitDownLeft  = $gameMap.isPassable(txLeft, ty, 2);
   const canExitDownRight = $gameMap.isPassable(txRight, ty, 2);
 
   if (!canExitDownLeft || !canExitDownRight) {
+    console.log("[COLISION SUBIDA] Techo detectado en", txLeft, txRight, ty);
+
     newY = ty + 1 + 0.001;
     vy = 0;
   }
 }
+
 
 
     // Aplicar posiciones reales
