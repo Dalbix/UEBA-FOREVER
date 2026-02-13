@@ -1,6 +1,7 @@
 /*:
  * @target MZ
  * @plugindesc Zoom dinámico centrado en el jugador con modos fijo o adaptativo.
+ * @author 3DalbiX
  * @help
  * Script calls:
  *   $gameSystem.enablePlayerZoom(2.0, 0);     // zoom 2x fijo

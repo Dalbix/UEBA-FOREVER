@@ -72,22 +72,38 @@
     return (coord - screenSize / 2) / zoom + screenSize / 2;
   }
 
-  // ==== CORRECCIÓN DE COORDENADAS PARA EVENTOS ====
+ // ==== CORRECCIÓN DE COORDENADAS PARA EVENTOS ====
 
   const _canvasToMapX = Game_Map.prototype.canvasToMapX;
   Game_Map.prototype.canvasToMapX = function(x) {
+	const scale = $gameScreen.zoomScale();
+    const zx = $gameScreen.zoomX();
+    const realX = (x - zx) / scale + zx;
+	if ($gameSystem._playerZoomScale) {
+    return Math.floor(this._displayX + realX / this.tileWidth());
+	}
+	
     const zoom = getZoom();
     const adjX = adjustedCoord(x, Graphics.width, zoom);
     return _canvasToMapX.call(this, adjX);
+	
   };
 
   const _canvasToMapY = Game_Map.prototype.canvasToMapY;
   Game_Map.prototype.canvasToMapY = function(y) {
+	  
+	if ($gameSystem._playerZoomScale) {  
+	const scale = $gameScreen.zoomScale();
+    const zy = $gameScreen.zoomY();
+    const realY = (y - zy) / scale + zy;
+    return Math.floor(this._displayY + realY / this.tileHeight());
+	}
+	  
     const zoom = getZoom();
     const adjY = adjustedCoord(y, Graphics.height, zoom);
     return _canvasToMapY.call(this, adjY);
   };
-
+  
   // ==== BLOQUEO DE DOBLE CLIC TRAS MENSAJE ====
 
   let _lastEventX = -1;
@@ -252,7 +268,4 @@ Game_Picture.prototype.scaleY = function() {
     this.y = adjY;
   };
 
-  function getZoom() {
-    return $gameSystem._disableAutoZoom ? 1.0 : ($gameScreen._zoomScale || 1.0);
-  }
 })();
