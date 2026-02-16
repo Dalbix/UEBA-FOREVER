@@ -209,7 +209,7 @@ Scene_Map.prototype.start = function() {
     }
   } else {
     // Reiniciamos el temporizador desde los datos
-    startTimer(data.duration, data.eventId);
+    //startTimer(data.duration, data.eventId);
   }
 };
 
