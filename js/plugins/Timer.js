@@ -151,7 +151,7 @@ console.log($gameSystem._customTimerData); // debería ser null
   destroyTimerSpriteOnly(); // eliminar sprite anterior sin borrar datos
   createTimerSprite();      // crear sprite de nuevo en la escena actual
 }
-function destroyTimerSpriteOnly() {
+/*function destroyTimerSpriteOnly() {
   if (_timerSprite) {
     const scene = SceneManager._scene;
     if (scene && scene.removeChild) {
@@ -160,7 +160,7 @@ function destroyTimerSpriteOnly() {
     _timerSprite.bitmap?.destroy(); // destruimos el bitmap de forma segura
     _timerSprite = null;
   }
-}
+}*/
 function destroyTimerSpriteOnly() {
   if (_timerSprite) {
     try {
@@ -233,14 +233,19 @@ Scene_Map.prototype.update = function() {
       _timerRemaining--;
       updateTimerText();
 
-      if (_timerRemaining <= 0) {
-        _timerRemaining = 0;
-        _timerRunning = false;
-        if (_commonEventId > 0) {
-          $gameTemp.reserveCommonEvent(_commonEventId);
-        }
-        console.log('Temporizador terminado!');
-      }
+	if (_timerRemaining <= 0) {
+	  _timerRemaining = 0;
+	  _timerRunning = false;
+
+	  // 🔴 IMPORTANTE: eliminar datos persistentes
+	  $gameSystem._customTimerData = null;
+
+	  if (_commonEventId > 0) {
+		$gameTemp.reserveCommonEvent(_commonEventId);
+	  }
+
+	  console.log('Temporizador terminado!');
+	}
     }
   }
 };
