@@ -209,7 +209,7 @@ Scene_Map.prototype.start = function() {
     }
   } else {
     // Reiniciamos el temporizador desde los datos
-    //startTimer(data.duration, data.eventId);
+    startTimer(data.duration, data.eventId);
   }
 };
 
@@ -239,7 +239,8 @@ Scene_Map.prototype.update = function() {
 
 	  // 🔴 IMPORTANTE: eliminar datos persistentes
 	  $gameSystem._customTimerData = null;
-
+$gameMessage.clear();
+$gameMap._interpreter.clear();
 	  if (_commonEventId > 0) {
 		$gameTemp.reserveCommonEvent(_commonEventId);
 	  }
