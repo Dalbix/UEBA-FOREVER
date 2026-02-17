@@ -1,10 +1,10 @@
 [
 null,
 {"id":1,"expanded":false,"name":"Pere_Casa","order":12,"parentId":5,"scrollX":540.6666666666666,"scrollY":311.6666666666667,"quick":false},
-{"id":2,"expanded":false,"name":"Inicio","order":11,"parentId":5,"scrollX":823.3333333333334,"scrollY":460,"quick":false},
+{"id":2,"expanded":false,"name":"Inicio","order":11,"parentId":5,"scrollX":540.6666666666666,"scrollY":307.6666666666667,"quick":false},
 {"id":3,"expanded":false,"name":"Loriguilla_Tienda","order":3,"parentId":6,"scrollX":823.3333333333334,"scrollY":460,"quick":false},
 {"id":4,"expanded":false,"name":"Loriguilla_CasaTendera","order":5,"parentId":6,"scrollX":646.4,"scrollY":364.8,"quick":false},
-{"id":5,"expanded":false,"name":"Mundo_Presente","order":1,"parentId":0,"scrollX":1444.6666666666667,"scrollY":444.3333333333333,"quick":false},
+{"id":5,"expanded":false,"name":"Mundo_Presente","order":1,"parentId":0,"scrollX":1444.6666666666667,"scrollY":1270.3333333333333,"quick":false},
 {"id":6,"expanded":true,"name":"Loriguilla","order":2,"parentId":5,"scrollX":659.3333333333334,"scrollY":1090.3333333333333,"quick":false},
 {"id":7,"expanded":false,"name":"Loriguilla_Luminosos","order":4,"parentId":6,"scrollX":823.3333333333334,"scrollY":460,"quick":false},
 {"id":8,"expanded":false,"name":"Cueva_Tesoro","order":9,"parentId":5,"scrollX":1347.2727272727273,"scrollY":1215.2727272727273,"quick":false},
