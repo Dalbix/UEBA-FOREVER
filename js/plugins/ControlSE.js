@@ -93,6 +93,7 @@ PluginManager.registerCommand("ControlSE", "ClearBuffer", args => {
 });
 PluginManager.registerCommand("ControlSE", "PlaySE", args => {
     const id = args.id;
+
     const se = {
         name: args.name,
         volume: Number(args.volume),
@@ -100,13 +101,15 @@ PluginManager.registerCommand("ControlSE", "PlaySE", args => {
         pan: Number(args.pan)
     };
 
-    const buffer = AudioManager.createBuffer('se', se.name);
-    buffer.volume = se.volume / 100;
-    buffer.pitch = se.pitch / 100;
-    buffer.pan = se.pan / 100;
-    buffer.play(false);
+    // Reproduce usando el sistema oficial
+    AudioManager.playSe(se);
 
-    seBuffers[id] = buffer;
+    // Captura el último buffer SE creado
+    const buffer = AudioManager._seBuffers[AudioManager._seBuffers.length - 1];
+
+    if (buffer) {
+        seBuffers[id] = buffer;
+    }
 });
 
 PluginManager.registerCommand("ControlSE", "SetVolume", args => {
