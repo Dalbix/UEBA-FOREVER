@@ -28,5 +28,6 @@ var $plugins =
 {"name":"DualHudBars","status":true,"description":"HUD con dos barras superiores configurables por comando (izquierda y derecha)","parameters":{}},
 {"name":"ResetVariableOnLoad","status":true,"description":"Resetea una variable seleccionable a 0 cada vez que se carga una partida.","parameters":{"sessionVariable":"49"}},
 {"name":"LightningStorm","status":true,"description":"Rayo de tormenta ramificado realista que cae desde la parte superior de la pantalla hasta un evento.","parameters":{}},
-{"name":"ElectricExplosion","status":true,"description":"Efecto de explosión eléctrica para eventos","parameters":{}}
+{"name":"ElectricExplosion","status":true,"description":"Efecto de explosión eléctrica para eventos","parameters":{}},
+{"name":"ControlSE","status":true,"description":"Controla el volumen de Sound Effects (SE) en tiempo real mediante IDs.","parameters":{}}
 ];
