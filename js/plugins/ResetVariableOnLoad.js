@@ -12,7 +12,7 @@
  * @help
  * La variable seleccionada se reinicia a 0
  * cada vez que se carga una partida.
- *
+ * Ademas descongela cualquier congelacion de player anterior al cargar.
  * Uso típico:
  * - Eventos que deben ejecutarse una vez por carga
  * - Flags de sesión
@@ -29,15 +29,19 @@
     const params = PluginManager.parameters(pluginName);
     const sessionVariableId = Number(params.sessionVariable || 0);
 
-    if (sessionVariableId > 0) {
+    const _extractSaveContents = DataManager.extractSaveContents;
+    DataManager.extractSaveContents = function(contents) {
+        _extractSaveContents.call(this, contents);
 
-        const _extractSaveContents = DataManager.extractSaveContents;
-        DataManager.extractSaveContents = function(contents) {
-            _extractSaveContents.call(this, contents);
-
-            // AQUÍ ya existen $gameVariables y compañía
+        // Reset variable de sesión
+        if (sessionVariableId > 0) {
             $gameVariables.setValue(sessionVariableId, 0);
-        };
-    }
+        }
+
+        // 🔓 Descongelar jugador al cargar partida
+        if (window.activarJugador) {
+            window.activarJugador();
+        }
+    };
 
 })();

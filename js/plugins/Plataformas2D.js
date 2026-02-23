@@ -551,8 +551,8 @@ else if (vy < 0) {
 
         const ex = plataforma._realX;
         const ey = plataforma._realY;
-
-        const onTop =
+//-------------------
+/*        const onTop =
           vy >= 0 &&
           player._realY + 1 >= ey &&
           player._realY < ey &&
@@ -564,7 +564,35 @@ else if (vy < 0) {
           player._realY = ey - OFFSET_Y;
           player._realY += (plataforma._realY - plataforma._prevRealY) || 0;
           player._realX += (plataforma._realX - plataforma._prevRealX) || 0;
-        }
+        }*/
+		// Detectar si el jugador está o estaba encima
+const wasOnTop =
+  plataforma._wasPlayerOnTop ||
+  (
+    vy >= 0 &&
+    player._realY + 1 >= ey &&
+    player._realY < ey &&
+    Math.abs(player._realX - ex) < 0.9
+  );
+
+// Guardar estado para el siguiente frame
+plataforma._wasPlayerOnTop = wasOnTop;
+
+if (wasOnTop) {
+  vy = 0;
+  grounded = true;
+
+  // Mantener al jugador pegado a la plataforma
+  player._realY = ey - OFFSET_Y;
+
+  // 🔥 Heredar movimiento horizontal y vertical
+  const dxPlat = (plataforma._realX - plataforma._prevRealX) || 0;
+  const dyPlat = (plataforma._realY - plataforma._prevRealY) || 0;
+
+  player._realX += dxPlat;
+  player._realY += dyPlat;
+}
+//----------------------
 
         plataforma._prevRealY = plataforma._realY;
         plataforma._prevRealX = plataforma._realX;
