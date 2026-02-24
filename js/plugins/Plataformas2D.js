@@ -391,7 +391,7 @@ if (vy > 0) {
 
   if (!canEnterUpLeft || !canEnterUpRight) {
     // 🔍 DEBUG
-    console.log("[COLISION CAIDA] Bloque detectado en", txLeft, txRight, ty);
+    //console.log("[COLISION CAIDA] Bloque detectado en", txLeft, txRight, ty);
 
     newY = ty - 0.001;
     vy = 0;
@@ -552,7 +552,7 @@ else if (vy < 0) {
         const ex = plataforma._realX;
         const ey = plataforma._realY;
 //-------------------
-/*        const onTop =
+   /*    const onTop =
           vy >= 0 &&
           player._realY + 1 >= ey &&
           player._realY < ey &&
@@ -564,34 +564,35 @@ else if (vy < 0) {
           player._realY = ey - OFFSET_Y;
           player._realY += (plataforma._realY - plataforma._prevRealY) || 0;
           player._realX += (plataforma._realX - plataforma._prevRealX) || 0;
+	
         }*/
-		// Detectar si el jugador está o estaba encima
-const wasOnTop =
-  plataforma._wasPlayerOnTop ||
-  (
-    vy >= 0 &&
-    player._realY + 1 >= ey &&
-    player._realY < ey &&
-    Math.abs(player._realX - ex) < 0.9
-  );
+// ===============================
+// Mod: moverse con plataforma horizontal
+// ===============================
+  const onTop =
+          vy >= 0 &&
+          player._realY + 1 >= ey &&
+          player._realY < ey &&
+          Math.abs(player._realX - ex) < 0.8;
 
-// Guardar estado para el siguiente frame
-plataforma._wasPlayerOnTop = wasOnTop;
 
-if (wasOnTop) {
-  vy = 0;
+if (onTop) {
   grounded = true;
+  vy = 0;
 
-  // Mantener al jugador pegado a la plataforma
+  // Ajustar altura
   player._realY = ey - OFFSET_Y;
 
-  // 🔥 Heredar movimiento horizontal y vertical
-  const dxPlat = (plataforma._realX - plataforma._prevRealX) || 0;
-  const dyPlat = (plataforma._realY - plataforma._prevRealY) || 0;
+  // HEREDAR MOVIMIENTO HORIZONTAL REAL
+  const dxPlat = plataforma._realX - plataforma._prevRealX;
 
-  player._realX += dxPlat;
-  player._realY += dyPlat;
+  // Aplicar solo si la plataforma se mueve horizontalmente
+  if (Math.abs(dxPlat) > 0) {
+    player._realX += dxPlat;
+    player._x = player._realX; // sincronizar posición lógica
+  }
 }
+
 //----------------------
 
         plataforma._prevRealY = plataforma._realY;
